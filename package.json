@@ -1,0 +1,9 @@
+{
+  "name": "pirate-defense",
+  "version": "0.1.0",
+  "description": "Pirate Defense - Tower Defense 3D pirata (Three.js). Etapa 1: mapa Ilha dos Náufragos.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "MIT"
+}

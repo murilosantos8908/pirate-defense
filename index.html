@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Pirate Defense – Ilha dos Náufragos</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%B4%E2%80%8D%E2%98%A0%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="css/style.css" />
+
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.js" } }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- Etiquetas que seguem pontos do mapa -->
+  <div class="tag tag-entrance" id="label-entrance">Entrada dos inimigos</div>
+  <div class="tag tag-base" id="label-base">Sua base</div>
+
+  <!-- Menu inicial -->
+  <main id="menu" class="menu">
+    <section class="menu-panel">
+      <h1 class="logo">
+        <span class="logo-line">PIRATE</span>
+        <span class="logo-line">DEFENSE</span>
+      </h1>
+      <p class="map-card">
+        <span class="map-card-name">Ilha dos Náufragos</span>
+        <span class="map-card-note">Prévia do mapa. Torres e inimigos chegam nas próximas etapas.</span>
+      </p>
+      <button id="btn-start" class="btn btn-primary" type="button">Entrar na ilha</button>
+    </section>
+  </main>
+
+  <!-- Interface durante a exploração -->
+  <div id="hud" class="hud" hidden>
+    <div class="hud-top">
+      <div class="hud-map">Ilha dos Náufragos</div>
+      <div class="hud-actions">
+        <button id="btn-recenter" class="btn btn-small" type="button">Centralizar câmera</button>
+        <button id="btn-menu" class="btn btn-small btn-ghost" type="button">Menu</button>
+      </div>
+    </div>
+    <ul class="hud-help" aria-label="Controles da câmera">
+      <li><span class="key">Arrastar</span> girar</li>
+      <li><span class="key">Botão direito</span> ou <span class="key">WASD</span> mover</li>
+      <li><span class="key">Roda</span> zoom</li>
+      <li><span class="key">Q</span> <span class="key">E</span> girar</li>
+    </ul>
+  </div>
+
+  <p id="error" class="error" hidden></p>
+
+  <noscript><p class="error">Ative o JavaScript para jogar.</p></noscript>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
