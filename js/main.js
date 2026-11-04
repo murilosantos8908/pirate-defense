@@ -5,6 +5,8 @@ import { buildIslandMap } from './map.js';
 import { CameraRig } from './camera.js';
 import { EnemyManager } from './enemies.js';
 import { DefenderManager } from './defenders.js';
+import { Meta, MAX_TEAM } from './collections.js';
+import { createShopUi } from './shop.js';
 import { WaveManager, rewardForKill, MAX_WAVES } from './waves.js';
 
 const $ = (id) => document.getElementById(id);
@@ -47,7 +49,11 @@ rig.setMenuMode(true);
 const BASE_MAX_HP = 20;
 let baseHp = BASE_MAX_HP;
 let gameOver = false;
-let money = 0;
+let money = 250;
+let defenders = null;
+const meta = new Meta();
+let shop = null;
+let rewarded = false;
 
 const style = document.createElement('style');
 style.textContent = `
@@ -97,18 +103,46 @@ function damageBase(amount) {
     gameOver = true;
     overBox.hidden = false;
     waves.fail();
+    endRound(false);
   }
 }
 
 /* ---------- Inimigos ---------- */
 const enemies = new EnemyManager(scene, map, {
   onBaseHit: (damage, enemy) => { damageBase(damage); waves.resolveEnemy(enemy); },
-  onKill: (enemy) => { money += rewardForKill(enemy); waves.resolveEnemy(enemy); renderMoney(); },
+  onKill: (enemy) => {
+    const reward = rewardForKill(enemy);
+    money += reward;
+    meta.addCoins(reward);
+    waves.resolveEnemy(enemy);
+    renderMoney();
+    renderMenuCoins();
+    shop?.refresh();
+  },
 });
-function renderMoney() { $('hud-money').textContent = money; }
+function renderMoney() {
+  $('hud-money').textContent = money;
+  if (defenders?.selected) defenders.refreshInfo();
+}
+function payMoney(amount) {
+  if (money < amount) return false;
+  money -= amount;
+  renderMoney();
+  return true;
+}
+function refundMoney(amount) {
+  money += amount;
+  renderMoney();
+}
 const waves = new WaveManager({
   enemies,
-  onReward: (amount) => { money += amount; renderMoney(); },
+  onReward: (amount) => {
+    money += amount;
+    meta.addCoins(amount);
+    renderMoney();
+    renderMenuCoins();
+    shop?.refresh();
+  },
   onChange: (s) => {
     $('hud-wave').textContent = s.number;
     $('hud-enemies').textContent = s.remaining;
@@ -116,9 +150,36 @@ const waves = new WaveManager({
     $('btn-wave').textContent = s.state === 'intermission' ? `Próxima wave em ${s.seconds}s` : 'Iniciar Wave';
     $('hud-wave-status').textContent = ({ ready: 'Wave pronta', spawning: 'Inimigos chegando…', active: 'Derrote os inimigos!', intermission: 'Wave concluída!', victory: 'Vitória!' })[s.state] || '';
   },
-  onVictory: () => { gameOver = true; overBox.querySelector('.over-message').textContent = 'Vitória! Você defendeu a base!'; overBox.hidden = false; },
+  onVictory: () => {
+    gameOver = true;
+    overBox.querySelector('.over-message').textContent = 'Vitória! Você defendeu a base!';
+    overBox.hidden = false;
+    endRound(true);
+  },
 });
-const defenders = new DefenderManager({ scene, camera, dom: renderer.domElement, map, enemies });
+defenders = new DefenderManager({
+  scene, camera, dom: renderer.domElement, map, enemies,
+  getMoney: () => money,
+  pay: payMoney,
+  refund: refundMoney,
+});
+defenders.setTeam(meta.teamEntries());
+shop = createShopUi(meta, { onTeamChange: () => defenders.setTeam(meta.teamEntries()) });
+shop.refresh();
+
+function renderMenuCoins() {
+  $('menu-coins').textContent = `🪙 ${meta.coins}`;
+}
+
+function endRound(victory) {
+  if (rewarded) return;
+  rewarded = true;
+  const gain = waves.number * 15 + (victory ? 100 : 0);
+  meta.addCoins(gain);
+  renderMenuCoins();
+  shop?.refresh();
+  overBox.querySelector('.over-message').textContent += ` (+${gain} 🪙)`;
+}
 
 function resetRound() {
   enemies.clear();
@@ -126,9 +187,10 @@ function resetRound() {
   baseHp = BASE_MAX_HP;
   gameOver = false;
   overBox.hidden = true;
-  money = 0;
+  money = 250;
   renderMoney();
   waves.reset();
+  rewarded = false;
   overBox.querySelector('.over-message').textContent = 'Sua base foi destruída!';
   renderBaseHp();
 }
@@ -166,12 +228,14 @@ function startGame() {
   $('hud').hidden = false;
   hpBox.hidden = false;
   resetRound();
+  defenders.setTeam(meta.teamEntries());
   defenders.setEnabled(true);
   rig.setMenuMode(false);
   rig.reset(true);
 }
 
 function backToMenu() {
+  shop?.close();
   inGame = false;
   $('hud').hidden = true;
   hpBox.hidden = true;
@@ -186,12 +250,15 @@ function backToMenu() {
 $('btn-start').addEventListener('click', startGame);
 $('btn-wave').addEventListener('click', () => waves.startNext());
 $('btn-recenter').addEventListener('click', () => rig.reset(true));
+$('btn-shop').addEventListener('click', () => shop.open());
+$('btn-shop-hud').addEventListener('click', () => shop.open());
 $('btn-menu').addEventListener('click', backToMenu);
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Escape' && inGame) {
-    if (!defenders.cancel()) backToMenu();
-  } else if (e.code === 'Digit1' && inGame && !gameOver) {
-    defenders.togglePlacing('sailor');
+    if (!shop.close() && !defenders.cancel()) backToMenu();
+  } else if (e.code.startsWith('Digit') && inGame && !gameOver) {
+    const n = Number(e.code.slice(5));
+    if (n >= 1 && n <= MAX_TEAM) defenders.toggleSlot(n - 1);
   } else if ((e.code === 'Enter' || e.code === 'Space') && !inGame && document.activeElement === document.body) {
     e.preventDefault();
     startGame();
