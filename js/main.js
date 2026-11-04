@@ -5,6 +5,7 @@ import { buildIslandMap } from './map.js';
 import { CameraRig } from './camera.js';
 import { EnemyManager } from './enemies.js';
 import { DefenderManager } from './defenders.js';
+import { WaveManager, rewardForKill, MAX_WAVES } from './waves.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -46,6 +47,7 @@ rig.setMenuMode(true);
 const BASE_MAX_HP = 20;
 let baseHp = BASE_MAX_HP;
 let gameOver = false;
+let money = 0;
 
 const style = document.createElement('style');
 style.textContent = `
@@ -74,7 +76,7 @@ const hpFill = hpBox.querySelector('.base-hp-fill');
 const overBox = document.createElement('div');
 overBox.className = 'game-over';
 overBox.hidden = true;
-overBox.innerHTML = 'Sua base foi destruída!<br><button class="btn btn-primary" type="button">Tentar de novo</button>';
+overBox.innerHTML = '<span class="over-message">Sua base foi destruída!</span><br><button class="btn btn-primary" type="button">Tentar de novo</button>';
 document.body.appendChild(overBox);
 
 function renderBaseHp() {
@@ -94,28 +96,29 @@ function damageBase(amount) {
   if (baseHp <= 0) {
     gameOver = true;
     overBox.hidden = false;
+    waves.fail();
   }
 }
 
 /* ---------- Inimigos ---------- */
 const enemies = new EnemyManager(scene, map, {
-  onBaseHit: (damage) => damageBase(damage),
-  onKill: () => {},
+  onBaseHit: (damage, enemy) => { damageBase(damage); waves.resolveEnemy(enemy); },
+  onKill: (enemy) => { money += rewardForKill(enemy); waves.resolveEnemy(enemy); renderMoney(); },
+});
+function renderMoney() { $('hud-money').textContent = money; }
+const waves = new WaveManager({
+  enemies,
+  onReward: (amount) => { money += amount; renderMoney(); },
+  onChange: (s) => {
+    $('hud-wave').textContent = s.number;
+    $('hud-enemies').textContent = s.remaining;
+    $('btn-wave').disabled = s.state !== 'ready' || s.number >= MAX_WAVES;
+    $('btn-wave').textContent = s.state === 'intermission' ? `Próxima wave em ${s.seconds}s` : 'Iniciar Wave';
+    $('hud-wave-status').textContent = ({ ready: 'Wave pronta', spawning: 'Inimigos chegando…', active: 'Derrote os inimigos!', intermission: 'Wave concluída!', victory: 'Vitória!' })[s.state] || '';
+  },
+  onVictory: () => { gameOver = true; overBox.querySelector('.over-message').textContent = 'Vitória! Você defendeu a base!'; overBox.hidden = false; },
 });
 const defenders = new DefenderManager({ scene, camera, dom: renderer.domElement, map, enemies });
-
-const TEST_SPAWN_INTERVAL = 2.5;
-const TEST_SEQUENCE = ['crab', 'crab', 'slime'];
-let spawnTimer = 0;
-let spawnIndex = 0;
-
-function updateTestSpawner(dt) {
-  spawnTimer -= dt;
-  if (spawnTimer <= 0) {
-    enemies.spawn(TEST_SEQUENCE[spawnIndex++ % TEST_SEQUENCE.length]);
-    spawnTimer = TEST_SPAWN_INTERVAL;
-  }
-}
 
 function resetRound() {
   enemies.clear();
@@ -123,8 +126,10 @@ function resetRound() {
   baseHp = BASE_MAX_HP;
   gameOver = false;
   overBox.hidden = true;
-  spawnTimer = 1;
-  spawnIndex = 0;
+  money = 0;
+  renderMoney();
+  waves.reset();
+  overBox.querySelector('.over-message').textContent = 'Sua base foi destruída!';
   renderBaseHp();
 }
 overBox.querySelector('button').addEventListener('click', resetRound);
@@ -179,6 +184,7 @@ function backToMenu() {
 }
 
 $('btn-start').addEventListener('click', startGame);
+$('btn-wave').addEventListener('click', () => waves.startNext());
 $('btn-recenter').addEventListener('click', () => rig.reset(true));
 $('btn-menu').addEventListener('click', backToMenu);
 window.addEventListener('keydown', (e) => {
@@ -210,7 +216,7 @@ function frame() {
   map.update(t, dt);
   rig.update(dt);
   if (inGame && !gameOver) {
-    updateTestSpawner(dt);
+    waves.update(dt);
     enemies.update(dt, t, camera);
     defenders.update(dt, t);
   }

@@ -37,6 +37,13 @@
   <div id="hud" class="hud" hidden>
     <div class="hud-top">
       <div class="hud-map">Ilha dos Náufragos</div>
+      <section class="wave-hud" aria-live="polite">
+        <div><strong>Moedas:</strong> <span id="hud-money">0</span></div>
+        <div><strong>Wave:</strong> <span id="hud-wave">0</span> / 10</div>
+        <div><strong>Inimigos restantes:</strong> <span id="hud-enemies">0</span></div>
+        <div id="hud-wave-status">Inicie a próxima wave</div>
+        <button id="btn-wave" class="btn btn-small" type="button">Iniciar Wave</button>
+      </section>
       <div class="hud-actions">
         <button id="btn-recenter" class="btn btn-small" type="button">Centralizar câmera</button>
         <button id="btn-menu" class="btn btn-small btn-ghost" type="button">Menu</button>
