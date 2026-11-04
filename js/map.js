@@ -498,6 +498,15 @@ export function buildIslandMap(scene) {
     pathLength: curve.getLength(),
     entrancePosition,
     basePosition,
+    /** Local válido para defensor: na grama, longe do caminho, das zonas reservadas e da decoração. */
+    canBuild(x, z) {
+      return (
+        islandRho(x, z) < 0.92 &&
+        distToPath(x, z) > PW / 2 + 0.9 &&
+        !reserved.some((r) => Math.hypot(x - r.x, z - r.z) < r.r) &&
+        !placed.some((p) => Math.hypot(x - p.x, z - p.z) < p.r + 0.7)
+      );
+    },
     update(t, dt) {
       for (const fn of updaters) fn(t, dt);
     },

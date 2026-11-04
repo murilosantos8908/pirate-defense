@@ -4,6 +4,7 @@ import { setupLighting } from './lighting.js';
 import { buildIslandMap } from './map.js';
 import { CameraRig } from './camera.js';
 import { EnemyManager } from './enemies.js';
+import { DefenderManager } from './defenders.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -101,6 +102,7 @@ const enemies = new EnemyManager(scene, map, {
   onBaseHit: (damage) => damageBase(damage),
   onKill: () => {},
 });
+const defenders = new DefenderManager({ scene, camera, dom: renderer.domElement, map, enemies });
 
 const TEST_SPAWN_INTERVAL = 2.5;
 const TEST_SEQUENCE = ['crab', 'crab', 'slime'];
@@ -117,6 +119,7 @@ function updateTestSpawner(dt) {
 
 function resetRound() {
   enemies.clear();
+  defenders.clear();
   baseHp = BASE_MAX_HP;
   gameOver = false;
   overBox.hidden = true;
@@ -158,6 +161,7 @@ function startGame() {
   $('hud').hidden = false;
   hpBox.hidden = false;
   resetRound();
+  defenders.setEnabled(true);
   rig.setMenuMode(false);
   rig.reset(true);
 }
@@ -168,6 +172,8 @@ function backToMenu() {
   hpBox.hidden = true;
   overBox.hidden = true;
   enemies.clear();
+  defenders.setEnabled(false);
+  defenders.clear();
   $('menu').hidden = false;
   rig.setMenuMode(true);
 }
@@ -176,8 +182,11 @@ $('btn-start').addEventListener('click', startGame);
 $('btn-recenter').addEventListener('click', () => rig.reset(true));
 $('btn-menu').addEventListener('click', backToMenu);
 window.addEventListener('keydown', (e) => {
-  if (e.code === 'Escape' && inGame) backToMenu();
-  else if ((e.code === 'Enter' || e.code === 'Space') && !inGame && document.activeElement === document.body) {
+  if (e.code === 'Escape' && inGame) {
+    if (!defenders.cancel()) backToMenu();
+  } else if (e.code === 'Digit1' && inGame && !gameOver) {
+    defenders.togglePlacing('sailor');
+  } else if ((e.code === 'Enter' || e.code === 'Space') && !inGame && document.activeElement === document.body) {
     e.preventDefault();
     startGame();
   }
@@ -203,6 +212,7 @@ function frame() {
   if (inGame && !gameOver) {
     updateTestSpawner(dt);
     enemies.update(dt, t, camera);
+    defenders.update(dt, t);
   }
   updateLabels();
   renderer.render(scene, camera);
