@@ -4,6 +4,20 @@
   "description": "Pirate Defense - Tower Defense 3D pirata (Three.js). Etapa 1: mapa Ilha dos Náufragos.",
   "scripts": {
     "start": "node server.js"
+    
   },
-  "license": "MIT"
+  "license": "MIT",
+  "main": "server.js",
+  "directories": {
+    "test": "tests"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/murilosantos8908/pirate-defense.git"
+  },
+  "author": "",
+  "bugs": {
+    "url": "https://github.com/murilosantos8908/pirate-defense/issues"
+  },
+  "homepage": "https://github.com/murilosantos8908/pirate-defense#readme"
 }
