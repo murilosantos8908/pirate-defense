@@ -27,6 +27,11 @@ export const ENEMY_TYPES = {
     barY: 1.35,
     build: buildCrab,
   },
+  cursedCaptain: {
+    name: 'Capitão Amaldiçoado', boss: true,
+    hp: 1800, armor: 0.25, speed: 1.0, damage: 10,
+    scale: 1.9, barY: 2.9, build: buildCursedCaptain,
+  },
   slime: {
     name: 'Slime Marinho',
     hp: 80,
@@ -71,6 +76,29 @@ function buildCrab(model) {
     legs.forEach((l) => (l.rotation.x = Math.sin(t * 14 + l.userData.phase * 2) * 0.35));
     model.position.y = Math.abs(Math.sin(t * 7)) * 0.04;
   };
+}
+
+function buildCursedCaptain(model) {
+  const gm = { transparent: true, opacity: 0.82, emissive: 0x1fa58c, emissiveIntensity: 0.6 };
+  const glow = { emissive: 0x5cffd9, emissiveIntensity: 1.6 };
+  const body = new THREE.Group(); model.add(body);
+  add(body, new THREE.ConeGeometry(0.8, 1.9, 9), 0x7fe9d6, { y: 0.95, rx: Math.PI, matOpts: gm });
+  add(body, new THREE.CylinderGeometry(0.55, 0.8, 1, 9), 0x1c2b3a, { y: 1.65, matOpts: { transparent: true, opacity: 0.9 } });
+  add(body, new THREE.BoxGeometry(0.1, 1.5, 1.3), 0x2a3f55, { x: -0.5, y: 1.4, matOpts: { transparent: true, opacity: 0.7 } });
+  add(body, G.body, 0xe8fff8, { y: 2.45, sx: 0.76, sy: 0.8, sz: 0.76, matOpts: gm });
+  [-1, 1].forEach((s) => add(body, G.eye, 0x5cffd9, { x: 0.3, y: 2.5, z: 0.15 * s, sx: 1.2, sy: 1.2, sz: 1.2, matOpts: glow }));
+  add(body, new THREE.CylinderGeometry(0.85, 0.85, 0.07, 3), C.black, { y: 2.78, ry: Math.PI / 2 });
+  add(body, new THREE.CylinderGeometry(0.3, 0.4, 0.4, 8), C.black, { y: 3 });
+  add(body, new THREE.CylinderGeometry(0.41, 0.41, 0.07, 8), C.gold, { y: 2.88 });
+  add(body, G.body, C.white, { x: 0.38, y: 3, sx: 0.13, sy: 0.13, sz: 0.05 });
+  const arm = new THREE.Group(); arm.position.set(0.2, 1.9, 0.62); body.add(arm);
+  add(arm, new THREE.CylinderGeometry(0.1, 0.1, 0.8, 6), 0x1c2b3a, { y: -0.4, rz: -0.5 });
+  add(arm, new THREE.BoxGeometry(0.07, 1.7, 0.2), 0xbff7ea, { x: 0.45, y: -0.8, rz: -1.2, matOpts: { ...gm, emissiveIntensity: 1 } });
+  const aura = add(model, new THREE.SphereGeometry(1.7, 14, 10), 0xa0ffee, {
+    y: 1.6, cast: false, matOpts: { transparent: true, opacity: 0.28, emissive: 0x5cffd9, emissiveIntensity: 0.8, side: THREE.DoubleSide },
+  });
+  aura.visible = false; model.userData.aura = aura;
+  return (t) => { body.position.y = 0.25 + Math.sin(t * 2) * 0.12; arm.rotation.z = Math.sin(t * 3) * 0.25; aura.scale.setScalar(1 + Math.sin(t * 8) * 0.04); };
 }
 
 function buildSlime(model) {
@@ -156,6 +184,9 @@ export class Enemy {
     this.fillMat = hb.fillMat;
     this.healthBar.position.y = def.barY;
     this.root.add(this.healthBar);
+    this.root.scale.setScalar(def.scale || 1);
+    this.shield = 0; this.enraged = false; this.abilityTimer = 6; this.shieldTimer = 12;
+    this.summonRequest = 0; this.summoned = false;
     this._placeOnPath();
   }
 
@@ -168,6 +199,8 @@ export class Enemy {
   }
 
   takeDamage(amount) {
+    if (!this.alive || this.shield > 0) return;
+    amount = Math.max(1, amount * (1 - (this.def.armor || 0)));
     if (!this.alive) return;
     this.hp = Math.max(0, this.hp - amount);
     this.hitPulse = 0.15;
@@ -189,6 +222,15 @@ export class Enemy {
     this.model.rotation.y = Math.atan2(-t.z, t.x);
   }
 
+  _bossLogic(dt) {
+    this.abilityTimer -= dt;
+    if (this.abilityTimer <= 0) { this.abilityTimer = this.enraged ? 6 : 9; this.summonRequest = 2; }
+    if (this.shield > 0) this.shield = Math.max(0, this.shield - dt);
+    else if ((this.shieldTimer -= dt) <= 0) { this.shieldTimer = 14; this.shield = 3; }
+    if (!this.enraged && this.hp < this.maxHp * 0.5) { this.enraged = true; this.speed *= 1.6; }
+    this.model.userData.aura.visible = this.shield > 0;
+  }
+
   update(dt, time, camera) {
     if (this.state === 'dying') {
       this.deathTimer -= dt;
@@ -201,6 +243,7 @@ export class Enemy {
     this.distance += this.speed * dt;
     if (this.distance >= this.pathLength) return 'reached';
     this._placeOnPath();
+    if (this.def.boss) this._bossLogic(dt);
 
     this.animate(time + this.seed);
     if (this.hitPulse > 0) {
@@ -229,9 +272,11 @@ export class EnemyManager {
     this.enemies = [];
   }
 
-  spawn(typeId) {
+  spawn(typeId, distance = 0, summoned = false) {
     if (!ENEMY_TYPES[typeId]) throw new Error(`Inimigo desconhecido: ${typeId}`);
     const e = new Enemy(typeId, this.map.curve, this.map.pathLength);
+    e.distance = distance; e._placeOnPath();
+    if (summoned) { e.summoned = true; e._waveResolved = true; }
     this.group.add(e.root);
     this.enemies.push(e);
     return e;
@@ -240,7 +285,12 @@ export class EnemyManager {
   damage(enemy, amount) {
     const wasAlive = enemy.alive;
     enemy.takeDamage(amount);
-    if (wasAlive && !enemy.alive) this.hooks.onKill?.(enemy);
+    if (wasAlive && !enemy.alive) {
+      if (enemy.def.boss) for (const other of this.enemies) if (other.summoned && other.alive) {
+        other.state = 'dying'; other.deathTimer = 0.35; other.healthBar.visible = false;
+      }
+      this.hooks.onKill?.(enemy);
+    }
   }
 
   get aliveCount() {
@@ -251,6 +301,10 @@ export class EnemyManager {
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const e = this.enemies[i];
       const result = e.update(dt, time, camera);
+      if (e.summonRequest) {
+        for (let k = 0; k < e.summonRequest; k++) this.spawn('crab', Math.max(0, e.distance - 1.5 - k * 1.2), true);
+        e.summonRequest = 0;
+      }
       if (result === 'reached') {
         this.hooks.onBaseHit?.(e.damage, e);
         this._remove(i);

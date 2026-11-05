@@ -11,6 +11,8 @@ const { WaveManager, createWave, rewardForKill, MAX_WAVES } = await import(
 assert.ok(createWave(2).enemies.length > createWave(1).enemies.length);
 assert.ok(createWave(5).enemies.includes('slime'));
 assert.ok(rewardForKill({ type: 'slime' }) > rewardForKill({ type: 'crab' }));
+assert.equal(createWave(10).enemies.at(-1), 'cursedCaptain');
+assert.equal(createWave(10).boss, 'cursedCaptain');
 
 const spawned = [];
 const rewards = [];

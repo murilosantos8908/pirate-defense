@@ -1,17 +1,25 @@
 export const MAX_WAVES = 10;
 export const INTERMISSION_SECONDS = 5;
-export const KILL_REWARDS = Object.freeze({ crab: 5, slime: 10 });
+export const BOSS_INTERVAL = 10;
+export const BOSS_ROSTER = ['cursedCaptain'];
+export const KILL_REWARDS = Object.freeze({ crab: 5, slime: 10, cursedCaptain: 250 });
+
+export const bossFor = (n) =>
+  n % BOSS_INTERVAL === 0 ? BOSS_ROSTER[(n / BOSS_INTERVAL - 1) % BOSS_ROSTER.length] : null;
 
 /** Produces a deterministic, progressively harder wave composition. */
 export function createWave(number) {
   if (!Number.isInteger(number) || number < 1) throw new RangeError('Wave deve começar em 1.');
   const count = 5 + (number - 1) * 2;
   const slimeCount = Math.min(Math.floor((number - 1) / 2), Math.floor(count / 2));
+  const enemies = Array.from({ length: count }, (_, i) => i % 3 === 2 && i < slimeCount * 3 ? 'slime' : 'crab');
+  const boss = bossFor(number);
+  if (boss) enemies.push(boss);
   return {
-    number,
-    reward: 20 + number * 5,
+    number, boss,
+    reward: 20 + number * 5 + (boss ? 100 : 0),
     spawnInterval: Math.max(0.45, 1.5 - number * 0.07),
-    enemies: Array.from({ length: count }, (_, i) => i % 3 === 2 && i < slimeCount * 3 ? 'slime' : 'crab'),
+    enemies,
   };
 }
 
@@ -38,8 +46,13 @@ export class WaveManager {
 
   startNext() {
     if (this.state !== 'ready' || this.number >= MAX_WAVES) return false;
-    this.number++;
-    this.wave = createWave(this.number);
+    return this.startWave(this.number + 1);
+  }
+
+  startWave(number) {
+    if (this.state !== 'ready' || !Number.isInteger(number) || number < 1 || number > MAX_WAVES) return false;
+    this.number = number;
+    this.wave = createWave(number);
     this.spawnIndex = 0;
     this.remaining = this.wave.enemies.length;
     this.spawnTimer = 0;

@@ -1,8 +1,9 @@
 import {
   RARITIES, CATALOG, SUMMON_COST, SUMMON10_COST, MAX_TEAM, MAX_LEVEL,
-  rarityOf, levelCost, effectiveChances,
+  rarityOf, levelCost, effectiveChances, UPGRADES,
 } from './collections.js';
 import { DEFENDER_TYPES, statsFor } from './defenders.js';
+import { MAX_WAVES } from './waves.js';
 
 const CSS = `
 .sh{position:fixed;inset:0;background:rgba(8,24,40,.92);display:flex;flex-direction:column;padding:max(16px,env(safe-area-inset-top)) 18px 18px;gap:12px;overflow:auto;z-index:20}
@@ -17,7 +18,7 @@ const CSS = `
 @keyframes pop{from{transform:scale(.3) rotate(-8deg);opacity:0}}
 `;
 
-export function createShopUi(meta, { onTeamChange = () => {} } = {}) {
+export function createShopUi(meta, { onTeamChange = () => {}, onCodeSubmit = () => '', onWaveSelect = () => '', getCodeStatus = () => ({}) } = {}) {
   const style = document.createElement('style');
   style.textContent = CSS;
   document.head.appendChild(style);
@@ -28,6 +29,7 @@ export function createShopUi(meta, { onTeamChange = () => {} } = {}) {
   document.body.appendChild(root);
   let tab = 'shop';
   let lastResults = [];
+  let codeMessage = '';
 
   const stats = (id, level) => {
     const value = statsFor(id, level);
@@ -82,15 +84,41 @@ export function createShopUi(meta, { onTeamChange = () => {} } = {}) {
     return `<h2>Coleção — Equipe ${meta.state.team.length}/${MAX_TEAM}</h2><div class="sh-grid">${cards}</div>`;
   }
 
+  function upgradesHtml() {
+    const s = meta.state.stats;
+    const cards = UPGRADES.map((u) => {
+      const level = meta.upgradeLevel(u.id); const maxed = level >= u.max;
+      return `<div class="sh-card" style="--c:#ffc83d"><h4>${u.name}</h4><small>${u.desc}</small>
+        <div class="row"><span>Nível</span><b>${level}/${u.max}</b></div>
+        <button class="btn btn-small" data-a="buyup" data-id="${u.id}" ${maxed || meta.coins < u.cost(level) ? 'disabled' : ''}>${maxed ? 'Máximo' : `Comprar · ${u.cost(level)} 🪙`}</button></div>`;
+    }).join('');
+    return `<h2>Melhorias permanentes</h2><div class="sh-grid">${cards}</div>
+      <small>Partidas: ${s.runs} · Vitórias: ${s.wins} · Melhor wave: ${s.bestWave} · Inimigos: ${s.kills} · Chefes: ${s.bosses}</small>`;
+  }
+
+  function codesHtml() {
+    const status = getCodeStatus();
+    return `<h2>Códigos de teste</h2><p>Digite um código para liberar recursos de teste nesta sessão.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><input id="code-input" aria-label="Código" autocomplete="off" placeholder="Digite um código">
+      <button class="btn btn-small" data-a="code">Ativar código</button></div><p>${codeMessage}</p>
+      <p>dinheiro: ${status.money ? 'ativado · compras da partida gratuitas' : 'bloqueado'}</p>
+      <p>niveis: ${status.levels ? 'ativado · seleção de wave liberada' : 'bloqueado'}</p>
+      ${status.levels ? `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label for="wave-select">Escolher wave</label>
+        <select id="wave-select">${Array.from({ length: MAX_WAVES }, (_, i) => `<option value="${i + 1}">Wave ${i + 1}</option>`).join('')}</select>
+        <button class="btn btn-small" data-a="wave">Iniciar wave</button></div>` : ''}`;
+  }
+
   function render() {
     const menuCoins = document.getElementById('menu-coins');
     if (menuCoins) menuCoins.textContent = `Moedas: ${meta.coins}`;
     root.innerHTML = `<div class="sh-top">
       <button class="btn btn-small" data-a="tab" data-id="shop">Loja</button>
       <button class="btn btn-small" data-a="tab" data-id="coll">Coleção</button>
+      <button class="btn btn-small" data-a="tab" data-id="upg">Melhorias</button>
+      <button class="btn btn-small" data-a="tab" data-id="codes">Códigos</button>
       <button class="btn btn-small btn-ghost" data-a="close">Voltar</button>
       <span class="coins">🪙 ${meta.coins}</span>
-    </div>${tab === 'shop' ? shopHtml() : collectionHtml()}`;
+    </div>${tab === 'shop' ? shopHtml() : tab === 'upg' ? upgradesHtml() : tab === 'codes' ? codesHtml() : collectionHtml()}`;
   }
 
   root.addEventListener('click', (event) => {
@@ -100,6 +128,8 @@ export function createShopUi(meta, { onTeamChange = () => {} } = {}) {
 
     if (a === 'tab') tab = id;
     else if (a === 'close') { root.hidden = true; return; }
+    else if (a === 'code') codeMessage = onCodeSubmit(root.querySelector('#code-input')?.value || '');
+    else if (a === 'wave') codeMessage = onWaveSelect(Number(root.querySelector('#wave-select')?.value));
     else if (a === 's1' || a === 's10') {
       const results = meta.summon(a === 's1' ? 1 : 10);
       if (!results) alert('Moedas insuficientes. Ganhe mais jogando partidas.');
@@ -110,7 +140,7 @@ export function createShopUi(meta, { onTeamChange = () => {} } = {}) {
     } else if (a === 'evo') {
       meta.evolve(id);
       onTeamChange();
-    }
+    } else if (a === 'buyup') meta.buyUpgrade(id);
     render();
   });
 

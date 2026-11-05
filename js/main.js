@@ -7,7 +7,8 @@ import { EnemyManager } from './enemies.js';
 import { DefenderManager } from './defenders.js';
 import { Meta, MAX_TEAM } from './collections.js';
 import { createShopUi } from './shop.js';
-import { WaveManager, rewardForKill, MAX_WAVES } from './waves.js';
+import { WaveManager, rewardForKill, MAX_WAVES, bossFor } from './waves.js';
+import { MAPS } from './maps.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -46,10 +47,13 @@ const rig = new CameraRig(camera, renderer.domElement);
 rig.setMenuMode(true);
 
 /* ---------- Vida da base ---------- */
-const BASE_MAX_HP = 20;
-let baseHp = BASE_MAX_HP;
+let baseMax = 20;
+let baseHp = baseMax;
 let gameOver = false;
 let money = 250;
+let run = { kills: 0, bosses: 0, coins: 0 };
+let announced = 0;
+const testCodes = { money: false, levels: false };
 let defenders = null;
 const meta = new Meta();
 let shop = null;
@@ -78,6 +82,11 @@ hpBox.innerHTML = '<div class="base-hp-text"></div><div class="base-hp-track"><d
 document.body.appendChild(hpBox);
 const hpText = hpBox.querySelector('.base-hp-text');
 const hpFill = hpBox.querySelector('.base-hp-fill');
+const bossBox = document.createElement('div');
+bossBox.className = 'boss-bar'; bossBox.hidden = true;
+bossBox.innerHTML = '<div class="boss-name"></div><div class="boss-track"><div class="boss-fill"></div></div>';
+document.body.appendChild(bossBox);
+const bossName = bossBox.querySelector('.boss-name'); const bossFill = bossBox.querySelector('.boss-fill');
 
 const overBox = document.createElement('div');
 overBox.className = 'game-over';
@@ -86,8 +95,8 @@ overBox.innerHTML = '<span class="over-message">Sua base foi destruída!</span><
 document.body.appendChild(overBox);
 
 function renderBaseHp() {
-  const r = baseHp / BASE_MAX_HP;
-  hpText.textContent = `Base: ${baseHp} / ${BASE_MAX_HP}`;
+  const r = baseHp / baseMax;
+  hpText.textContent = `Base: ${baseHp} / ${baseMax}`;
   hpFill.style.width = `${r * 100}%`;
   hpFill.style.background = r > 0.5 ? '#4cd964' : r > 0.25 ? '#ffd23d' : '#ff4b3e';
 }
@@ -101,7 +110,6 @@ function damageBase(amount) {
   hpBox.classList.add('hit');
   if (baseHp <= 0) {
     gameOver = true;
-    overBox.hidden = false;
     waves.fail();
     endRound(false);
   }
@@ -114,6 +122,8 @@ const enemies = new EnemyManager(scene, map, {
     const reward = rewardForKill(enemy);
     money += reward;
     meta.addCoins(reward);
+    run.kills++; run.coins += reward;
+    if (enemy.def.boss) { run.bosses++; toast('👻 Capitão Amaldiçoado derrotado!'); }
     waves.resolveEnemy(enemy);
     renderMoney();
     renderMenuCoins();
@@ -121,16 +131,18 @@ const enemies = new EnemyManager(scene, map, {
   },
 });
 function renderMoney() {
-  $('hud-money').textContent = money;
+  $('hud-money').textContent = testCodes.money ? '∞' : money;
   if (defenders?.selected) defenders.refreshInfo();
 }
 function payMoney(amount) {
+  if (testCodes.money) return true;
   if (money < amount) return false;
   money -= amount;
   renderMoney();
   return true;
 }
 function refundMoney(amount) {
+  if (testCodes.money) return;
   money += amount;
   renderMoney();
 }
@@ -139,6 +151,7 @@ const waves = new WaveManager({
   onReward: (amount) => {
     money += amount;
     meta.addCoins(amount);
+    run.coins += amount;
     renderMoney();
     renderMenuCoins();
     shop?.refresh();
@@ -149,11 +162,10 @@ const waves = new WaveManager({
     $('btn-wave').disabled = s.state !== 'ready' || s.number >= MAX_WAVES;
     $('btn-wave').textContent = s.state === 'intermission' ? `Próxima wave em ${s.seconds}s` : 'Iniciar Wave';
     $('hud-wave-status').textContent = ({ ready: 'Wave pronta', spawning: 'Inimigos chegando…', active: 'Derrote os inimigos!', intermission: 'Wave concluída!', victory: 'Vitória!' })[s.state] || '';
+    if (s.state === 'spawning' && bossFor(s.number) && announced !== s.number) { announced = s.number; toast('⚠️ CHEFE: Capitão Amaldiçoado!'); }
   },
   onVictory: () => {
     gameOver = true;
-    overBox.querySelector('.over-message').textContent = 'Vitória! Você defendeu a base!';
-    overBox.hidden = false;
     endRound(true);
   },
 });
@@ -164,37 +176,65 @@ defenders = new DefenderManager({
   refund: refundMoney,
 });
 defenders.setTeam(meta.teamEntries());
-shop = createShopUi(meta, { onTeamChange: () => defenders.setTeam(meta.teamEntries()) });
+shop = createShopUi(meta, {
+  onTeamChange: () => defenders.setTeam(meta.teamEntries()),
+  getCodeStatus: () => ({ money: testCodes.money, levels: testCodes.levels }),
+  onCodeSubmit: (raw) => {
+    const code = raw.trim().toLowerCase();
+    if (code === 'dinheiro') { testCodes.money = true; renderMoney(); return 'Código dinheiro ativado: compras da partida gratuitas.'; }
+    if (code === 'niveis') { testCodes.levels = true; return 'Código niveis ativado: seleção de wave liberada.'; }
+    return 'Código inválido.';
+  },
+  onWaveSelect: (number) => {
+    if (!testCodes.levels) return 'Ative o código niveis primeiro.';
+    if (!inGame) return 'Entre na ilha para iniciar uma wave.';
+    if (!waves.startWave(number)) return 'Aguarde a partida ficar pronta para iniciar outra wave.';
+    shop.close(); return `Iniciando a wave ${number}.`;
+  },
+});
 shop.refresh();
 
 function renderMenuCoins() {
   $('menu-coins').textContent = `🪙 ${meta.coins}`;
 }
 
+function toast(text) {
+  const el = document.createElement('div'); el.className = 'toast'; el.textContent = text;
+  document.body.appendChild(el); setTimeout(() => el.remove(), 3200);
+}
+
 function endRound(victory) {
   if (rewarded) return;
   rewarded = true;
-  const gain = waves.number * 15 + (victory ? 100 : 0);
+  const gain = waves.number * 15 + (victory ? 100 : 0) + run.bosses * 300;
   meta.addCoins(gain);
+  if (run.bosses) meta.grantCopy('musketeer');
+  meta.recordRun({ victory, wave: waves.number, kills: run.kills, bosses: run.bosses });
   renderMenuCoins();
   shop?.refresh();
-  overBox.querySelector('.over-message').textContent += ` (+${gain} 🪙)`;
+  overBox.classList.toggle('win', victory);
+  overBox.innerHTML = `<h2>${victory ? '🏆 Vitória!' : '☠️ Derrota'}</h2><p>${victory ? 'Você defendeu a ilha!' : 'Sua base foi destruída!'}</p>
+    <dl class="res"><dt>Wave alcançada</dt><dd>${waves.number} / ${MAX_WAVES}</dd><dt>Inimigos derrotados</dt><dd>${run.kills}</dd>
+    <dt>Chefes derrotados</dt><dd>${run.bosses}</dd><dt>Moedas na partida</dt><dd>${run.coins} 🪙</dd><dt>Bônus final</dt><dd>+${gain} 🪙</dd>
+    ${run.bosses ? '<dt>Recompensa do chefe</dt><dd>+1 cópia Mosqueteiro</dd>' : ''}</dl>
+    <div class="res-actions"><button class="btn btn-primary" data-act="again" type="button">Jogar de novo</button><button class="btn btn-small" data-act="menu" type="button">Menu</button></div>`;
+  overBox.hidden = false;
 }
 
 function resetRound() {
   enemies.clear();
   defenders.clear();
-  baseHp = BASE_MAX_HP;
+  const b = meta.bonuses(); baseMax = 20 + b.baseHp; baseHp = baseMax;
   gameOver = false;
   overBox.hidden = true;
-  money = 250;
+  money = 250 + b.startMoney; defenders.damageMult = b.damageMult;
+  run = { kills: 0, bosses: 0, coins: 0 }; announced = 0;
   renderMoney();
   waves.reset();
   rewarded = false;
-  overBox.querySelector('.over-message').textContent = 'Sua base foi destruída!';
   renderBaseHp();
 }
-overBox.querySelector('button').addEventListener('click', resetRound);
+overBox.addEventListener('click', (e) => { const act = e.target.closest('[data-act]')?.dataset.act; if (act === 'again') resetRound(); else if (act === 'menu') backToMenu(); });
 renderBaseHp();
 
 /* ---------- Etiquetas 3D (Entrada / Base) ---------- */
@@ -240,6 +280,7 @@ function backToMenu() {
   $('hud').hidden = true;
   hpBox.hidden = true;
   overBox.hidden = true;
+  bossBox.hidden = true;
   enemies.clear();
   defenders.setEnabled(false);
   defenders.clear();
@@ -287,6 +328,7 @@ function frame() {
     enemies.update(dt, t, camera);
     defenders.update(dt, t);
   }
+  updateBossBar();
   updateLabels();
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
@@ -294,3 +336,15 @@ function frame() {
 frame();
 
 window.__pirate = { scene, camera, renderer, map, rig, MAP, enemies };
+$('map-list').innerHTML = MAPS.map((m) => `<li class="${m.available ? 'on' : 'off'}">${m.available ? '⚓' : '🔒'} ${m.name} <small>${m.available ? 'Chefe: ' + m.boss : 'Em breve'}</small></li>`).join('');
+renderMenuCoins();
+addEventListener('pagehide', () => meta.save());
+document.addEventListener('visibilitychange', () => { if (document.hidden) meta.save(); });
+
+function updateBossBar() {
+  const boss = inGame ? enemies.enemies.find((enemy) => enemy.def.boss && enemy.alive) : null;
+  bossBox.hidden = !boss;
+  if (!boss) return;
+  bossName.textContent = `${boss.def.name}${boss.shield > 0 ? ' · 🛡 ESCUDO' : ''}${boss.enraged ? ' · 🔥 FÚRIA' : ''}`;
+  bossFill.style.width = `${(boss.hp / boss.maxHp) * 100}%`;
+}

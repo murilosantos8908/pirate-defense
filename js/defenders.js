@@ -10,6 +10,7 @@ const G = {
 
 const BULLET = new THREE.SphereGeometry(0.09, 6, 5);
 const BULLET_MAT = new THREE.MeshBasicMaterial({ color: 0xffe9a0 });
+const SPARK = new THREE.SphereGeometry(1, 6, 5);
 
 /* ------------------------------------------------------------------ */
 /* Definições. Para criar outro defensor, adicione uma entrada aqui.   */
@@ -664,6 +665,8 @@ export class DefenderManager {
     this.list = [];
     this.team = [{ id: 'sailor', level: 1 }];
     this.bullets = [];
+    this.fx = [];
+    this.damageMult = 1;
     this.selected = null;
     this.placingType = null;
     this.ghost = null;
@@ -761,6 +764,8 @@ export class DefenderManager {
     this.list.length = 0;
     this.bullets.forEach(({ mesh }) => this.group.remove(mesh));
     this.bullets.length = 0;
+    this.fx.forEach((f) => { this.group.remove(f.mesh); f.mat.dispose(); });
+    this.fx.length = 0;
   }
 
   update(dt, time) {
@@ -774,6 +779,7 @@ export class DefenderManager {
         this.bullets.splice(i, 1);
       }
     }
+    this._updateFx(dt);
   }
 
   /* ---------- internos ---------- */
@@ -795,12 +801,28 @@ export class DefenderManager {
       this.group.add(mesh);
       this.bullets.push({ mesh, from, to, t: 0 });
     }
-    this._applyDamage(enemy, defender, attack.damage, wasAlive);
+    this._fx(enemy.position.clone().setY(0.7), defender.def.projectile ? 0xffb347 : 0xffffff, defender.def.projectile ? 0.4 : 0.7);
+    this._applyDamage(enemy, defender, Math.round(attack.damage * this.damageMult), wasAlive);
   };
+
+  _fx(pos, color, size = 0.5) {
+    if (this.fx.length > 60) return;
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, depthWrite: false });
+    const mesh = new THREE.Mesh(SPARK, mat); mesh.position.copy(pos); mesh.scale.setScalar(0.1); this.group.add(mesh);
+    this.fx.push({ mesh, mat, t: 0, size });
+  }
+
+  _updateFx(dt) {
+    for (let i = this.fx.length - 1; i >= 0; i--) {
+      const f = this.fx[i]; f.t += dt / 0.28; f.mesh.scale.setScalar(f.size * (0.3 + f.t)); f.mat.opacity = 0.9 * Math.max(0, 1 - f.t);
+      if (f.t >= 1) { this.group.remove(f.mesh); f.mat.dispose(); this.fx.splice(i, 1); }
+    }
+  }
 
   _applyDamage(enemy, defender, damage, wasAlive = enemy.alive) {
     this.enemies.damage(enemy, damage);
     if (wasAlive && !enemy.alive) {
+      this._fx(enemy.position.clone().setY(0.6), enemy.def.boss ? 0x5cffd9 : 0xff4b3e, enemy.def.boss ? 3 : 1.1);
       defender.kills++;
       if (this.selected === defender) this._renderInfo();
     }
@@ -958,6 +980,7 @@ export class DefenderManager {
     const next = d?.nextUpgrade;
     if (!next || !this.pay(next.upgradeCost)) return;
     d.upgrade();
+    this._fx(d.root.position.clone().setY(1), 0xffc83d, 1.8);
     this._renderInfo();
   }
 

@@ -28,6 +28,11 @@ export const SUMMON10_COST = 900;
 export const MAX_TEAM = 5;
 export const MAX_LEVEL = 10;
 const KEY = 'pirate-defense-save-v1';
+export const UPGRADES = [
+  { id: 'baseHp', name: 'Casco Reforçado', desc: '+5 de vida da base por nível', max: 5, cost: (l) => 150 * (l + 1) },
+  { id: 'startMoney', name: 'Cofre do Capitão', desc: '+50 moedas iniciais por nível', max: 5, cost: (l) => 120 * (l + 1) },
+  { id: 'damage', name: 'Pólvora Seca', desc: '+5% de dano por nível', max: 5, cost: (l) => 200 * (l + 1) },
+];
 
 export const rarityOf = (id) => RARITIES.find((r) => r.id === id);
 /** Cópias necessárias para subir do nível `level` para `level + 1`. */
@@ -56,6 +61,11 @@ export class Meta {
     let s = null;
     try { s = JSON.parse(storage?.getItem(KEY)); } catch { /* save inválido */ }
     this.state = s || { coins: 10000, owned: { sailor: { level: 1, copies: 0 } }, team: ['sailor'] };
+    this.state.upgrades = { ...(this.state.upgrades || {}) };
+    this.state.stats = { runs: 0, wins: 0, bestWave: 0, kills: 0, bosses: 0, ...(this.state.stats || {}) };
+    if (!this.state.owned || !this.state.owned.sailor) this.state.owned = { ...(this.state.owned || {}), sailor: { level: 1, copies: 0 } };
+    this.state.team = (Array.isArray(this.state.team) ? this.state.team : []).filter((id) => this.state.owned[id]);
+    if (!this.state.team.length) this.state.team = ['sailor'];
     // Bonus de teste: eleva saves existentes sem apagar o progresso.
     if (this.state.coins < 10000) {
       this.state.coins = 10000;
@@ -66,6 +76,18 @@ export class Meta {
 
   get coins() { return this.state.coins; }
   addCoins(n) { this.state.coins += n; this.save(); }
+  upgradeLevel(id) { return this.state.upgrades[id] || 0; }
+  bonuses() { return { baseHp: this.upgradeLevel('baseHp') * 5, startMoney: this.upgradeLevel('startMoney') * 50, damageMult: 1 + this.upgradeLevel('damage') * 0.05 }; }
+  buyUpgrade(id) {
+    const u = UPGRADES.find((entry) => entry.id === id); const level = this.upgradeLevel(id);
+    if (!u || level >= u.max || this.state.coins < u.cost(level)) return false;
+    this.state.coins -= u.cost(level); this.state.upgrades[id] = level + 1; this.save(); return true;
+  }
+  grantCopy(id) { const owned = this.state.owned[id]; if (owned) owned.copies++; else this.state.owned[id] = { level: 1, copies: 0 }; this.save(); }
+  recordRun({ victory, wave, kills, bosses }) {
+    const s = this.state.stats; s.runs++; if (victory) s.wins++;
+    s.bestWave = Math.max(s.bestWave, wave); s.kills += kills; s.bosses += bosses; this.save();
+  }
 
   summonOne() {
     let roll = this.rng() * 100;
