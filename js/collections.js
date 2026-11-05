@@ -11,10 +11,10 @@ export const RARITIES = [
 export const CATALOG = [
   { id: 'sailor', name: 'Marinheiro', rarity: 'common', icon: '⚓', ready: true },
   { id: 'musketeer', name: 'Mosqueteiro', rarity: 'uncommon', icon: '🔫', ready: true },
-  { id: 'cannoneer', name: 'Canhoneiro', rarity: 'uncommon', icon: '💣', ready: false },
-  { id: 'parrot', name: 'Papagaio', rarity: 'common', icon: '🦜', ready: false },
-  { id: 'captain', name: 'Capitão', rarity: 'rare', icon: '🏴‍☠️', ready: false },
-  { id: 'markswoman', name: 'Atiradora', rarity: 'rare', icon: '🎯', ready: false },
+  { id: 'cannoneer', name: 'Canhoneiro', rarity: 'uncommon', icon: '💣', ready: true },
+  { id: 'parrot', name: 'Papagaio', rarity: 'common', icon: '🦜', ready: true },
+  { id: 'captain', name: 'Capitão', rarity: 'rare', icon: '🏴‍☠️', ready: true },
+  { id: 'markswoman', name: 'Atiradora', rarity: 'rare', icon: '🎯', ready: true },
   { id: 'seawitch', name: 'Bruxa do Mar', rarity: 'epic', icon: '🔮', ready: false },
   { id: 'skeleton', name: 'Esqueleto Pirata', rarity: 'epic', icon: '💀', ready: false },
   { id: 'brute', name: 'Brutamontes', rarity: 'epic', icon: '🪓', ready: false },
@@ -55,7 +55,12 @@ export class Meta {
     this.rng = rng;
     let s = null;
     try { s = JSON.parse(storage?.getItem(KEY)); } catch { /* save inválido */ }
-    this.state = s || { coins: 300, owned: { sailor: { level: 1, copies: 0 } }, team: ['sailor'] };
+    this.state = s || { coins: 10000, owned: { sailor: { level: 1, copies: 0 } }, team: ['sailor'] };
+    // Bonus de teste: eleva saves existentes sem apagar o progresso.
+    if (this.state.coins < 10000) {
+      this.state.coins = 10000;
+      this.save();
+    }
   }
   save() { try { this.storage?.setItem(KEY, JSON.stringify(this.state)); } catch { /* sem storage */ } }
 

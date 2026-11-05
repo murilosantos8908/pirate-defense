@@ -43,6 +43,54 @@ export const DEFENDER_TYPES = {
     ],
     build: buildMusketeer,
   },
+  cannoneer: {
+    name: 'Canhoneiro', desc: 'Dispara balas de canhão a longa distância. Recarga lenta.',
+    cost: 190, damage: 48, range: 8, attackSpeed: 0.42, strikeAt: 0.48, projectile: true,
+    levels: [
+      { upgradeCost: 0, ability: 'Canhão básico' },
+      { upgradeCost: 120, ability: 'Pólvora reforçada' },
+      { upgradeCost: 200, ability: 'Boca dourada', visualTier: 2 },
+      { upgradeCost: 290, ability: 'Recarga aprimorada' },
+      { upgradeCost: 400, ability: 'Bala explosiva', visualTier: 2 },
+    ],
+    build: buildCannoneer,
+  },
+  parrot: {
+    name: 'Papagaio', desc: 'Ave veloz que bica os inimigos próximos.',
+    cost: 70, damage: 7, range: 5, attackSpeed: 1.8, strikeAt: 0.4,
+    levels: [
+      { upgradeCost: 0, ability: 'Bicada rápida' },
+      { upgradeCost: 60, ability: 'Bico afiado' },
+      { upgradeCost: 110, ability: 'Colar de ouro', visualTier: 2 },
+      { upgradeCost: 170, ability: 'Voo ágil' },
+      { upgradeCost: 250, ability: 'Rasante pirata', visualTier: 2 },
+    ],
+    build: buildParrot,
+  },
+  captain: {
+    name: 'Capitão', desc: 'Líder pirata. Sabre afiado, dano alto e boa resistência no combate.',
+    cost: 200, damage: 30, range: 5.5, attackSpeed: 1.0, strikeAt: 0.5,
+    levels: [
+      { upgradeCost: 0, ability: 'Sabre do capitão' },
+      { upgradeCost: 120, ability: 'Voz de comando' },
+      { upgradeCost: 200, ability: 'Dragonas de ouro', visualTier: 2 },
+      { upgradeCost: 300, ability: 'Corte veloz' },
+      { upgradeCost: 420, ability: 'Lâmina dourada', visualTier: 2 },
+    ],
+    build: buildCaptain,
+  },
+  markswoman: {
+    name: 'Atiradora', desc: 'Franco-atiradora pirata. Alcance enorme e tiros de precisão.',
+    cost: 220, damage: 48, range: 12, attackSpeed: 0.45, strikeAt: 0.5, projectile: true,
+    levels: [
+      { upgradeCost: 0, ability: 'Rifle de precisão' },
+      { upgradeCost: 130, ability: 'Luneta calibrada' },
+      { upgradeCost: 210, ability: 'Mira dourada', visualTier: 2 },
+      { upgradeCost: 310, ability: 'Recarga ágil' },
+      { upgradeCost: 430, ability: 'Tiro mortal', visualTier: 2 },
+    ],
+    build: buildMarkswoman,
+  },
 };
 
 /** Atributos por nível de evolução (cópias gastas). Usado pelo jogo e pela coleção. */
@@ -153,6 +201,304 @@ function buildMusketeer(model) {
       else if (swing < 0.45) arm.rotation.z = lerp(1.2, 1.4, swing / 0.45); // mira
       else if (swing < 0.6) arm.rotation.z = lerp(1.4, 0.95, (swing - 0.45) / 0.15); // coice
       else arm.rotation.z = lerp(0.95, 1.2, (swing - 0.6) / 0.4);
+    },
+  };
+}
+
+function buildCannoneer(model, level = 1) {
+  const skin = 0xe2a878;
+  // Artilheiro com uniforme, bandana e faixa dourada.
+  [-0.15, 0.15].forEach((z) => add(model, G.box, C.black, { y: 0.22, z, sx: 0.24, sy: 0.45, sz: 0.22 }));
+  add(model, new THREE.CylinderGeometry(0.35, 0.4, 0.62, 8), C.blue, { y: 0.76 });
+  add(model, new THREE.CylinderGeometry(0.4, 0.4, 0.07, 8), C.gold, { y: 0.5 });
+  add(model, G.ball, skin, { y: 1.36, sx: 0.28, sy: 0.28, sz: 0.28 });
+  [-0.1, 0.1].forEach((z) => add(model, G.ball, C.black, { x: 0.25, y: 1.39, z, sx: 0.035, sy: 0.035, sz: 0.035 }));
+  add(model, new THREE.CylinderGeometry(0.3, 0.3, 0.1, 8), C.red, { y: 1.55 });
+  add(model, G.box, C.red, { x: -0.3, y: 1.54, sx: 0.24, sy: 0.08, sz: 0.1, rz: -0.25 });
+  add(model, new THREE.BoxGeometry(0.06, 0.55, 0.3), C.gold, { x: 0.33, y: 0.8 });
+
+  // Carruagem e rodas de madeira.
+  add(model, new THREE.BoxGeometry(0.78, 0.18, 0.6), C.woodDark, { x: -0.18, y: 0.29 });
+  [-1, 1].forEach((s) => add(model, new THREE.CylinderGeometry(0.24, 0.24, 0.12, 10), C.wood, { x: -0.18, y: 0.3, z: 0.34 * s, rx: Math.PI / 2 }));
+
+  // Cano voltado para +x, com pivô para o recuo do disparo.
+  const cannon = new THREE.Group();
+  cannon.position.set(0.12, 0.56, 0);
+  model.add(cannon);
+  add(cannon, new THREE.CylinderGeometry(0.24, 0.18, 0.7, 8), C.black, { x: 0.12, rz: -Math.PI / 2, matOpts: { metalness: 0.55, roughness: 0.4 } });
+  const muzzle = add(cannon, new THREE.CylinderGeometry(0.3, 0.3, 0.12, 8), level >= 3 ? C.gold : C.woodDark, { x: 0.36, rz: -Math.PI / 2 });
+  add(cannon, new THREE.CylinderGeometry(0.19, 0.19, 0.1, 8), C.wood, { x: -0.2, rz: -Math.PI / 2 });
+  const flash = add(cannon, G.ball, C.yellow, { x: 0.58, sx: 0.42, sy: 0.34, sz: 0.34, cast: false, matOpts: { emissive: C.orange, emissiveIntensity: 1.5 } });
+  flash.visible = false;
+  const lerp = THREE.MathUtils.lerp;
+  return {
+    setLevel(l) { muzzle.material.color.set(l >= 3 ? C.gold : C.woodDark); },
+    pose(swing) {
+      flash.visible = swing >= 0.45 && swing < 0.58;
+      if (swing < 0) cannon.position.x = 0.12;
+      else if (swing < 0.48) cannon.position.x = lerp(0.12, 0.2, swing / 0.48);
+      else if (swing < 0.62) cannon.position.x = lerp(0.2, -0.12, (swing - 0.48) / 0.14);
+      else cannon.position.x = lerp(-0.12, 0.12, (swing - 0.62) / 0.38);
+    },
+  };
+}
+
+function buildParrot(model, level = 1) {
+  // Poleiro de madeira
+  add(model, new THREE.CylinderGeometry(0.3, 0.34, 0.1, 8), C.wood, { y: 0.05 });
+  add(model, new THREE.CylinderGeometry(0.08, 0.1, 0.9, 6), C.woodDark, { y: 0.5 });
+  add(model, new THREE.CylinderGeometry(0.05, 0.05, 0.9, 6), C.woodLight, { y: 0.98, rx: Math.PI / 2 });
+
+  const bird = new THREE.Group();
+  bird.position.y = 1.0;
+  model.add(bird);
+  const ball = G.ball;
+
+  // Corpo, barriga e cauda
+  add(bird, ball, C.red, { y: 0.32, sx: 0.3, sy: 0.42, sz: 0.3 });
+  add(bird, ball, C.yellow, { x: 0.1, y: 0.26, sx: 0.2, sy: 0.3, sz: 0.2 });
+  add(bird, G.box, C.red, { x: -0.22, y: -0.02, sx: 0.1, sy: 0.7, sz: 0.14, rz: 0.4 });
+  add(bird, G.box, C.blue, { x: -0.3, y: -0.3, sx: 0.1, sy: 0.3, sz: 0.2, rz: 0.4 });
+  [-0.07, 0.07].forEach((z) => add(bird, G.box, C.yellow, { x: -0.27, y: -0.2, z, sx: 0.07, sy: 0.4, sz: 0.06, rz: 0.4 }));
+
+  // Cabeça, face branca, olhos, tapa-olho e bico
+  add(bird, ball, C.red, { x: 0.08, y: 0.8, sx: 0.23, sy: 0.23, sz: 0.23 });
+  add(bird, ball, C.white, { x: 0.2, y: 0.78, sx: 0.1, sy: 0.13, sz: 0.17 });
+  [-0.13, 0.13].forEach((z) => add(bird, ball, C.black, { x: 0.22, y: 0.84, z, sx: 0.04, sy: 0.04, sz: 0.04 }));
+  add(bird, G.box, C.black, { x: 0.21, y: 0.84, z: -0.14, sx: 0.08, sy: 0.08, sz: 0.04 });
+  add(bird, new THREE.ConeGeometry(0.11, 0.3, 6), C.yellow, { x: 0.36, y: 0.78, rz: -Math.PI / 2 });
+  add(bird, new THREE.ConeGeometry(0.07, 0.18, 6), C.orange, { x: 0.3, y: 0.7, rz: -Math.PI / 2 });
+
+  // Chapéu pirata em miniatura
+  add(bird, new THREE.CylinderGeometry(0.27, 0.27, 0.04, 3), C.black, { x: 0.06, y: 1.0, ry: Math.PI / 2 });
+  add(bird, new THREE.CylinderGeometry(0.12, 0.16, 0.14, 8), C.black, { x: 0.06, y: 1.09 });
+  add(bird, new THREE.CylinderGeometry(0.165, 0.165, 0.03, 8), C.gold, { x: 0.06, y: 1.04 });
+
+  // Colar dourado (nível 3+)
+  const necklace = add(bird, new THREE.TorusGeometry(0.2, 0.03, 5, 12), C.gold, {
+    x: 0.04, y: 0.6, rx: Math.PI / 2, matOpts: { emissive: C.gold, emissiveIntensity: 0.4 },
+  });
+  necklace.visible = level >= 3;
+
+  // Asas (pivô no ombro)
+  const wings = [-1, 1].map((s) => {
+    const w = new THREE.Group();
+    w.position.set(0, 0.5, 0.26 * s);
+    bird.add(w);
+    add(w, G.box, C.red, { y: -0.2, sx: 0.32, sy: 0.5, sz: 0.06 });
+    add(w, G.box, C.blue, { y: -0.38, z: 0.03 * s, sx: 0.3, sy: 0.34, sz: 0.05 });
+    add(w, G.box, C.yellow, { x: -0.1, y: -0.3, z: 0.05 * s, sx: 0.08, sy: 0.4, sz: 0.04 });
+    return { w, s };
+  });
+
+  return {
+    setLevel(l) { necklace.visible = l >= 3; },
+    pose(swing) {
+      const t = performance.now() / 1000;
+      const flap = swing < 0 ? 0.12 + Math.sin(t * 3) * 0.08 : 0.9 + Math.sin(swing * 40) * 0.5;
+      wings.forEach(({ w, s }) => (w.rotation.x = -flap * s));
+      bird.scale.y = 1 + Math.sin(t * 2.2) * 0.02; // respiração
+      bird.rotation.z = swing < 0 ? 0 : -0.55 * Math.sin(Math.min(1, swing) * Math.PI); // bicada
+    },
+  };
+}
+
+function buildCaptain(model, level = 1) {
+  const skin = 0xf2b98a;
+  const torso = new THREE.Group();
+  model.add(torso);
+
+  // Calças brancas e botas pretas
+  [-0.15, 0.15].forEach((z) => {
+    add(model, G.box, C.white, { y: 0.26, z, sx: 0.26, sy: 0.44, sz: 0.24 });
+    add(model, G.box, C.black, { x: 0.03, y: 0.1, z, sx: 0.34, sy: 0.2, sz: 0.28 });
+  });
+
+  // Casaca azul, abas, cinto, botões e lenço
+  add(torso, new THREE.CylinderGeometry(0.36, 0.46, 0.78, 8), C.blue, { y: 0.82 });
+  add(torso, G.box, C.blue, { x: -0.36, y: 0.5, sx: 0.12, sy: 0.5, sz: 0.5 });
+  add(torso, new THREE.CylinderGeometry(0.44, 0.44, 0.08, 8), C.black, { y: 0.56 });
+  add(torso, G.box, C.gold, { x: 0.44, y: 0.56, sx: 0.06, sy: 0.14, sz: 0.2 });
+  [0.7, 0.88, 1.04].forEach((y) =>
+    add(torso, G.ball, C.gold, { x: 0.4 - (y - 0.7) * 0.2, y, sx: 0.05, sy: 0.05, sz: 0.05 })
+  );
+  add(torso, G.box, C.red, { x: 0.3, y: 0.84, sx: 0.05, sy: 0.6, sz: 0.2, rz: 0.1 });
+  add(torso, G.ball, C.white, { x: 0.27, y: 1.16, sx: 0.12, sy: 0.1, sz: 0.2 });
+
+  // Cabeça, olhos, barba e bigode
+  add(model, G.ball, skin, { y: 1.42, sx: 0.31, sy: 0.3, sz: 0.31 });
+  [-0.1, 0.1].forEach((z) => add(model, G.ball, C.black, { x: 0.28, y: 1.45, z, sx: 0.035, sy: 0.035, sz: 0.035 }));
+  add(model, G.ball, C.woodDark, { x: 0.15, y: 1.26, sx: 0.2, sy: 0.16, sz: 0.22 });
+  add(model, G.box, C.woodDark, { x: 0.28, y: 1.35, sx: 0.04, sy: 0.04, sz: 0.22 });
+
+  // Chapéu bicórnio com bordas douradas e pluma
+  add(model, G.box, C.black, { y: 1.64, sx: 0.5, sy: 0.1, sz: 1.1 });
+  [-1, 1].forEach((s) => add(model, G.box, C.black, { y: 1.72, z: 0.52 * s, sx: 0.5, sy: 0.2, sz: 0.1 }));
+  add(model, G.box, C.gold, { x: 0.26, y: 1.66, sx: 0.04, sy: 0.07, sz: 1.1 });
+  add(model, new THREE.CylinderGeometry(0.25, 0.3, 0.26, 8), C.black, { y: 1.76 });
+  add(model, new THREE.CylinderGeometry(0.31, 0.31, 0.05, 8), C.gold, { y: 1.68 });
+  add(model, G.ball, C.white, { x: -0.12, y: 1.98, z: 0.08, sx: 0.08, sy: 0.3, sz: 0.06 });
+  add(model, G.ball, C.red, { x: -0.1, y: 1.9, z: -0.05, sx: 0.07, sy: 0.22, sz: 0.05 });
+
+  // Capa vermelha com barra dourada (balança)
+  const cape = new THREE.Group();
+  cape.position.set(-0.36, 1.1, 0);
+  model.add(cape);
+  add(cape, G.box, C.red, { x: -0.04, y: -0.5, sx: 0.06, sy: 1.0, sz: 0.85 });
+  add(cape, G.box, C.gold, { x: -0.06, y: -1.0, sx: 0.07, sy: 0.08, sz: 0.88 });
+
+  // Dragonas (nível 3+)
+  const gold = new THREE.Group();
+  model.add(gold);
+  [-1, 1].forEach((s) => {
+    add(gold, G.box, C.gold, { y: 1.12, z: 0.44 * s, sx: 0.22, sy: 0.07, sz: 0.24, matOpts: { emissive: C.gold, emissiveIntensity: 0.5 } });
+    [-0.08, 0, 0.08].forEach((x) => add(gold, G.box, C.gold, { x, y: 1.02, z: 0.44 * s, sx: 0.03, sy: 0.14, sz: 0.03 }));
+  });
+  gold.visible = level >= 3;
+
+  // Braço livre com punho dourado
+  add(model, G.limb, C.blue, { y: 0.95, z: -0.42, rx: 0.15 });
+  add(model, new THREE.CylinderGeometry(0.12, 0.12, 0.08, 6), C.gold, { y: 0.72, z: -0.46, rx: 0.15 });
+  add(model, G.ball, skin, { y: 0.66, z: -0.47, sx: 0.1, sy: 0.1, sz: 0.1 });
+
+  // Braço do sabre (pivô no ombro)
+  const arm = new THREE.Group();
+  arm.position.set(0, 1.02, 0.42);
+  model.add(arm);
+  add(arm, G.limb, C.blue, { y: -0.25 });
+  add(arm, new THREE.CylinderGeometry(0.12, 0.12, 0.08, 6), C.gold, { y: -0.45 });
+  add(arm, G.ball, skin, { y: -0.52, sx: 0.1, sy: 0.1, sz: 0.1 });
+  const sword = new THREE.Group();
+  sword.position.y = -0.52;
+  sword.rotation.z = -Math.PI / 2;
+  arm.add(sword);
+  add(sword, new THREE.CylinderGeometry(0.04, 0.04, 0.22, 5), C.woodDark, { y: 0.05 });
+  add(sword, G.ball, C.gold, { y: 0.19, sx: 0.12, sy: 0.07, sz: 0.2 });
+  add(sword, G.box, C.gold, { y: 0.17, sx: 0.07, sy: 0.05, sz: 0.34 });
+  const blade = add(sword, G.box, 0xdfe6ee, { y: 0.66, sx: 0.04, sy: 0.9, sz: 0.12, matOpts: { metalness: 0.4, roughness: 0.4 } });
+  blade.material = blade.material.clone();
+  const setBlade = (l) => {
+    blade.material.color.set(l >= 5 ? 0xffc83d : 0xdfe6ee);
+    blade.material.emissive.set(l >= 5 ? 0xb87a00 : 0x000000);
+  };
+  setBlade(level);
+
+  const lerp = THREE.MathUtils.lerp;
+  return {
+    setLevel(l) { gold.visible = l >= 3; setBlade(l); },
+    pose(swing) {
+      const t = performance.now() / 1000;
+      torso.scale.y = 1 + Math.sin(t * 2.2) * 0.015;
+      cape.rotation.z = 0.08 + Math.sin(t * 2.5) * 0.05 + (swing >= 0 ? 0.2 : 0);
+      if (swing < 0) arm.rotation.z = 0.25;
+      else if (swing < 0.35) arm.rotation.z = lerp(0.25, -1.0, swing / 0.35);
+      else if (swing < 0.6) arm.rotation.z = lerp(-1.0, 1.6, (swing - 0.35) / 0.25);
+      else arm.rotation.z = lerp(1.6, 0.25, (swing - 0.6) / 0.4);
+    },
+  };
+}
+
+function buildMarkswoman(model, level = 1) {
+  const skin = 0xf4c29b;
+  const hair = 0x7a3b1c;
+  const torso = new THREE.Group();
+  model.add(torso);
+
+  // Pernas esguias, calça escura e botas de cano alto
+  [-0.14, 0.14].forEach((z) => {
+    add(model, G.box, C.woodDark, { y: 0.3, z, sx: 0.2, sy: 0.4, sz: 0.2 });
+    add(model, G.box, C.black, { x: 0.02, y: 0.12, z, sx: 0.26, sy: 0.3, sz: 0.24 });
+  });
+
+  // Colete verde-musgo sobre camisa branca, cinto com fivela e saia curta
+  add(torso, new THREE.CylinderGeometry(0.3, 0.33, 0.62, 8), C.white, { y: 0.78 });
+  add(torso, new THREE.CylinderGeometry(0.32, 0.35, 0.5, 8, 1, false, 0, Math.PI * 1.4), 0x2f7a4a, { y: 0.8, ry: -0.3 });
+  add(torso, new THREE.CylinderGeometry(0.36, 0.42, 0.18, 8), C.redDark, { y: 0.5 });
+  add(torso, new THREE.CylinderGeometry(0.35, 0.35, 0.07, 8), C.black, { y: 0.58 });
+  add(torso, G.box, C.gold, { x: 0.35, y: 0.58, sx: 0.05, sy: 0.12, sz: 0.16 });
+
+  // Cartucheira cruzada e lenço
+  add(torso, G.box, C.woodDark, { x: 0.05, y: 0.8, sx: 0.08, sy: 0.85, sz: 0.08, rx: -0.85, rz: 0.1 });
+  [-0.25, -0.05, 0.15, 0.3].forEach((k) =>
+    add(torso, G.box, C.gold, { x: 0.3, y: 0.8 + k * 0.5, z: -k * 0.45, sx: 0.04, sy: 0.1, sz: 0.04 })
+  );
+  add(torso, new THREE.CylinderGeometry(0.25, 0.28, 0.1, 8), C.red, { y: 1.1 });
+  add(torso, G.box, C.red, { x: -0.2, y: 0.98, sx: 0.06, sy: 0.3, sz: 0.1, rz: -0.15 });
+
+  // Cabeça com cabelo, olhos grandes, cílios e batom
+  add(model, G.ball, skin, { y: 1.42, sx: 0.31, sy: 0.3, sz: 0.3 });
+  add(model, G.ball, hair, { x: -0.1, y: 1.5, sx: 0.31, sy: 0.27, sz: 0.33 });
+  [-0.1, 0.1].forEach((z) => {
+    add(model, G.ball, C.white, { x: 0.26, y: 1.45, z, sx: 0.06, sy: 0.07, sz: 0.05 });
+    add(model, G.ball, 0x2a8fd8, { x: 0.31, y: 1.45, z, sx: 0.035, sy: 0.04, sz: 0.03 });
+    add(model, G.box, C.black, { x: 0.28, y: 1.53, z, sx: 0.03, sy: 0.02, sz: 0.1 });
+  });
+  add(model, G.box, C.red, { x: 0.3, y: 1.33, sx: 0.03, sy: 0.03, sz: 0.1 });
+
+  // Tranças longas
+  [-1, 1].forEach((s) => {
+    add(model, G.limb, hair, { x: -0.2, y: 1.12, z: 0.26 * s, sx: 1.4, sz: 1.4 });
+    add(model, G.ball, C.red, { x: -0.2, y: 0.86, z: 0.26 * s, sx: 0.07, sy: 0.07, sz: 0.07 });
+  });
+
+  // Chapéu tricórnio inclinado com pluma verde
+  const hat = new THREE.Group();
+  hat.position.set(0, 1.62, 0);
+  hat.rotation.x = 0.12;
+  model.add(hat);
+  add(hat, new THREE.CylinderGeometry(0.46, 0.46, 0.06, 3), C.black, { ry: Math.PI / 2 });
+  add(hat, new THREE.CylinderGeometry(0.22, 0.28, 0.22, 8), C.black, { y: 0.13 });
+  add(hat, new THREE.CylinderGeometry(0.29, 0.29, 0.05, 8), C.gold, { y: 0.06 });
+  add(hat, G.ball, 0x3fd06a, { x: -0.1, y: 0.32, z: 0.2, sx: 0.07, sy: 0.24, sz: 0.05, rz: -0.3 });
+
+  // Monóculo da mira (olho livre)
+  add(model, new THREE.TorusGeometry(0.07, 0.015, 5, 10), C.gold, { x: 0.32, y: 1.45, z: -0.1, ry: Math.PI / 2 });
+
+  // Braço livre apoiando o rifle
+  add(model, G.limb, C.white, { y: 0.95, z: -0.36, rx: 0.15, sx: 0.8, sz: 0.8 });
+
+  // Braço do rifle
+  const arm = new THREE.Group();
+  arm.position.set(0, 1.0, 0.36);
+  model.add(arm);
+  add(arm, G.limb, C.white, { y: -0.25, sx: 0.8, sz: 0.8 });
+  add(arm, G.ball, skin, { y: -0.5, sx: 0.09, sy: 0.09, sz: 0.09 });
+  add(arm, new THREE.BoxGeometry(0.14, 0.7, 0.18), C.wood, { y: -0.2, x: 0.03 });
+  add(arm, new THREE.CylinderGeometry(0.04, 0.05, 2.0, 6), 0x8d96a3, { y: -1.4, matOpts: { metalness: 0.6, roughness: 0.35 } });
+  add(arm, new THREE.CylinderGeometry(0.075, 0.075, 0.06, 6), C.gold, { y: -0.75 });
+
+  // Luneta
+  const scope = new THREE.Group();
+  scope.position.set(0.12, -0.95, 0);
+  arm.add(scope);
+  add(scope, new THREE.CylinderGeometry(0.06, 0.06, 0.5, 8), C.black, { matOpts: { metalness: 0.5, roughness: 0.4 } });
+  const lens = add(scope, new THREE.CylinderGeometry(0.065, 0.065, 0.03, 8), 0x5fd8ff, { y: 0.26, matOpts: { emissive: 0x2a9fd8, emissiveIntensity: 0.8 } });
+  const trim = new THREE.Group();
+  scope.add(trim);
+  [-0.2, 0.2].forEach((y) => add(trim, new THREE.TorusGeometry(0.07, 0.02, 5, 8), C.gold, { y, rx: Math.PI / 2, matOpts: { emissive: C.gold, emissiveIntensity: 0.5 } }));
+  trim.visible = level >= 3;
+
+  const flash = add(arm, G.ball, C.yellow, {
+    y: -2.5, sx: 0.22, sy: 0.22, sz: 0.22, cast: false,
+    matOpts: { emissive: C.orange, emissiveIntensity: 1.5 },
+  });
+  flash.visible = false;
+
+  const lerp = THREE.MathUtils.lerp;
+  return {
+    setLevel(l) {
+      trim.visible = l >= 3;
+      lens.material.emissiveIntensity = l >= 5 ? 1.6 : 0.8;
+    },
+    pose(swing) {
+      const t = performance.now() / 1000;
+      torso.scale.y = 1 + Math.sin(t * 2.2) * 0.015;
+      lens.material.opacity = 1;
+      flash.visible = swing >= 0.5 && swing < 0.65;
+      if (swing < 0) arm.rotation.z = 1.25 + Math.sin(t * 1.5) * 0.02;
+      else if (swing < 0.5) arm.rotation.z = lerp(1.25, 1.4, swing / 0.5);
+      else if (swing < 0.65) arm.rotation.z = lerp(1.4, 1.0, (swing - 0.5) / 0.15);
+      else arm.rotation.z = lerp(1.0, 1.25, (swing - 0.65) / 0.35);
     },
   };
 }
