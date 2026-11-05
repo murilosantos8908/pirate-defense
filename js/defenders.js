@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { COLORS as C } from './config.js';
 import { add } from './utils.js';
+import { EXTRA_TYPES } from './defenders_extra.js';
 
 const G = {
   limb: new THREE.CylinderGeometry(0.1, 0.1, 0.5, 6),
@@ -95,6 +96,8 @@ export const DEFENDER_TYPES = {
 };
 
 /** Atributos por nível de evolução (cópias gastas). Usado pelo jogo e pela coleção. */
+Object.assign(DEFENDER_TYPES, EXTRA_TYPES);
+
 export function statsFor(typeId, level = 1) {
   const d = DEFENDER_TYPES[typeId];
   const l = level - 1;

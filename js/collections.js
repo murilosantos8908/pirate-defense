@@ -15,12 +15,12 @@ export const CATALOG = [
   { id: 'parrot', name: 'Papagaio', rarity: 'common', icon: '🦜', ready: true },
   { id: 'captain', name: 'Capitão', rarity: 'rare', icon: '🏴‍☠️', ready: true },
   { id: 'markswoman', name: 'Atiradora', rarity: 'rare', icon: '🎯', ready: true },
-  { id: 'seawitch', name: 'Bruxa do Mar', rarity: 'epic', icon: '🔮', ready: false },
-  { id: 'skeleton', name: 'Esqueleto Pirata', rarity: 'epic', icon: '💀', ready: false },
-  { id: 'brute', name: 'Brutamontes', rarity: 'epic', icon: '🪓', ready: false },
-  { id: 'ghostcaptain', name: 'Capitão Fantasma', rarity: 'legendary', icon: '👻', ready: false },
-  { id: 'admiral', name: 'Almirante Dourado', rarity: 'mythic', icon: '👑', ready: false },
-  { id: 'poseidon', name: 'Poseidon Pirata', rarity: 'mythic', icon: '🔱', ready: false },
+  { id: 'seawitch', name: 'Bruxa do Mar', rarity: 'epic', icon: '🔮', ready: true },
+  { id: 'skeleton', name: 'Esqueleto Pirata', rarity: 'epic', icon: '💀', ready: true },
+  { id: 'brute', name: 'Brutamontes', rarity: 'epic', icon: '🪓', ready: true },
+  { id: 'ghostcaptain', name: 'Capitão Fantasma', rarity: 'legendary', icon: '👻', ready: true },
+  { id: 'admiral', name: 'Almirante Dourado', rarity: 'mythic', icon: '👑', ready: true },
+  { id: 'poseidon', name: 'Poseidon Pirata', rarity: 'mythic', icon: '🔱', ready: true },
 ];
 
 export const SUMMON_COST = 100;

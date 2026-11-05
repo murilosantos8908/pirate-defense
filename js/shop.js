@@ -3,6 +3,7 @@ import {
   rarityOf, levelCost, effectiveChances, UPGRADES,
 } from './collections.js';
 import { DEFENDER_TYPES, statsFor } from './defenders.js';
+import { iconUrl } from './icons.js';
 import { MAX_WAVES } from './waves.js';
 
 const CSS = `
@@ -11,7 +12,7 @@ const CSS = `
 .sh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
 .sh-card{padding:12px;border:3px solid var(--c);border-radius:14px;background:rgba(15,42,67,.95);display:grid;gap:6px;font-size:14px}
 .sh-card.locked{opacity:.45}.sh-card h4{margin:0;font-size:18px;color:var(--c)}
-.sh-card .ic{font-size:34px}.sh-card .row{display:flex;justify-content:space-between}
+.sh-card .ic{height:84px}.sh-card .ic img{width:72px;height:72px;object-fit:contain}.sh-card .row{display:flex;justify-content:space-between}
 .sh-card.team{box-shadow:0 0 0 3px #fff inset}
 .sh-chances{display:grid;gap:4px;max-width:420px}.sh-chances div{display:flex;justify-content:space-between;padding:4px 10px;border-radius:8px;background:rgba(255,255,255,.07)}
 .sh-reveal{display:flex;gap:12px;flex-wrap:wrap}.sh-reveal .sh-card{animation:pop .4s both;min-width:170px}
@@ -41,8 +42,9 @@ export function createShopUi(meta, { onTeamChange = () => {}, onCodeSubmit = () 
   const card = (character, extra = '') => {
     const rarity = rarityOf(character.rarity);
     const owned = meta.state.owned[character.id];
+    const src = iconUrl(character.id);
     return `<div class="sh-card ${owned ? '' : 'locked'} ${meta.inTeam(character.id) ? 'team' : ''}" style="--c:${rarity.color}">
-      <div class="ic">${character.icon}</div><h4>${character.name}</h4>
+      <div class="ic">${src ? `<img src="${src}" alt="${character.name}">` : character.icon}</div><h4>${character.name}</h4>
       <div style="color:${rarity.color}">${rarity.name}</div>${extra}</div>`;
   };
 

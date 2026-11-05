@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Ícones dos defensores</title>
+  <script type="importmap">{"imports":{"three":"../vendor/three.module.js"}}</script>
+  <style>
+    body{margin:24px;background:#18334b;color:#fff;font:16px system-ui,sans-serif}
+    button{padding:10px 16px;font:inherit;cursor:pointer}
+    #icons{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px;margin-top:20px}
+    figure{margin:0;padding:12px;text-align:center;background:#254a66;border-radius:12px}
+    img{display:block;width:128px;height:128px;margin:auto;background:repeating-conic-gradient(#789 0 25%,#567 0 50%) 0 0/16px 16px}
+  </style>
+</head>
+<body>
+  <h1>Ícones dos defensores</h1>
+  <p>Os retratos são renderizados pelos modelos 3D e têm fundo transparente.</p>
+  <button id="download" type="button">Baixar todos os PNGs</button>
+  <div id="icons"></div>
+  <script type="module">
+    import { DEFENDER_TYPES } from '../js/defenders.js';
+    import { iconUrl, downloadIcons } from '../js/icons.js';
+
+    const grid = document.getElementById('icons');
+    Object.entries(DEFENDER_TYPES).forEach(([id, defender]) => {
+      const url = iconUrl(id);
+      if (!url) return;
+      const figure = document.createElement('figure');
+      const image = document.createElement('img');
+      image.src = url;
+      image.alt = defender.name;
+      const caption = document.createElement('figcaption');
+      caption.textContent = defender.name;
+      figure.append(image, caption);
+      grid.append(figure);
+    });
+    document.getElementById('download').addEventListener('click', () => downloadIcons());
+  </script>
+</body>
+</html>
