@@ -1,14 +1,14 @@
 import * as THREE from 'three';
 import { CAMERA, MAP } from './config.js';
-import { setupLighting } from './lighting.js';
+import { setupLighting, tuneLighting } from './lighting.js';
 import { buildIslandMap } from './map.js';
 import { CameraRig } from './camera.js';
-import { EnemyManager } from './enemies.js';
+import { EnemyManager, ENEMY_TYPES } from './enemies.js';
 import { DefenderManager } from './defenders.js';
 import { Meta, MAX_TEAM } from './collections.js';
 import { createShopUi } from './shop.js';
-import { WaveManager, rewardForKill, MAX_WAVES, bossFor } from './waves.js';
-import { MAPS } from './maps.js';
+import { WaveManager, rewardForKill, MAX_WAVES } from './waves.js';
+import { MAPS, applyTheme } from './maps.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -41,8 +41,17 @@ const camera = new THREE.PerspectiveCamera(
   CAMERA.near,
   CAMERA.far
 );
-setupLighting(scene);
-const map = buildIslandMap(scene);
+const lights = setupLighting(scene);
+let mapIndex = 0;
+let map;
+function loadMap(i) {
+  if (map) scene.remove(map.group);
+  mapIndex = i;
+  applyTheme(i);
+  tuneLighting(lights, scene, MAPS[i].light);
+  map = buildIslandMap(scene, MAPS[i]);
+}
+loadMap(0);
 const rig = new CameraRig(camera, renderer.domElement);
 rig.setMenuMode(true);
 
@@ -123,7 +132,7 @@ const enemies = new EnemyManager(scene, map, {
     money += reward;
     meta.addCoins(reward);
     run.kills++; run.coins += reward;
-    if (enemy.def.boss) { run.bosses++; toast('👻 Capitão Amaldiçoado derrotado!'); }
+    if (enemy.def.boss) { run.bosses++; toast(`👻 ${enemy.def.name} derrotado!`); }
     waves.resolveEnemy(enemy);
     renderMoney();
     renderMenuCoins();
@@ -162,13 +171,17 @@ const waves = new WaveManager({
     $('btn-wave').disabled = s.state !== 'ready' || s.number >= MAX_WAVES;
     $('btn-wave').textContent = s.state === 'intermission' ? `Próxima wave em ${s.seconds}s` : 'Iniciar Wave';
     $('hud-wave-status').textContent = ({ ready: 'Wave pronta', spawning: 'Inimigos chegando…', active: 'Derrote os inimigos!', intermission: 'Wave concluída!', victory: 'Vitória!' })[s.state] || '';
-    if (s.state === 'spawning' && bossFor(s.number) && announced !== s.number) { announced = s.number; toast('⚠️ CHEFE: Capitão Amaldiçoado!'); }
+    if (s.state === 'spawning' && s.number === MAX_WAVES && MAPS[mapIndex].roster.boss && announced !== s.number) {
+      announced = s.number;
+      toast(`⚠️ CHEFE: ${ENEMY_TYPES[MAPS[mapIndex].roster.boss].name}!`);
+    }
   },
   onVictory: () => {
     gameOver = true;
     endRound(true);
   },
 });
+waves.roster = MAPS[mapIndex].roster;
 defenders = new DefenderManager({
   scene, camera, dom: renderer.domElement, map, enemies,
   getMoney: () => money,
@@ -193,6 +206,29 @@ shop = createShopUi(meta, {
   },
 });
 shop.refresh();
+const picker = $('map-picker');
+MAPS.forEach((m, i) => {
+  const b = document.createElement('button');
+  b.className = 'btn btn-small'; b.type = 'button'; b.textContent = `${i + 1}. ${m.name}`;
+  b.onclick = () => selectMap(i);
+  picker.appendChild(b);
+});
+function selectMap(i) {
+  waves.roster = MAPS[i].roster;
+  if (i !== mapIndex) {
+    loadMap(i);
+    enemies.map = map;
+    defenders.map = map;
+    resetRound();
+    rig.reset(false);
+    if (window.__pirate) window.__pirate.map = map;
+  }
+  [...picker.children].forEach((b, k) => b.classList.toggle('active', k === i));
+  document.querySelector('.map-card-name').textContent = MAPS[i].name;
+  document.querySelector('.map-card-note').textContent = MAPS[i].note;
+  $('hud-map-name').textContent = MAPS[i].name;
+}
+selectMap(0);
 
 function renderMenuCoins() {
   $('menu-coins').textContent = `🪙 ${meta.coins}`;
@@ -239,15 +275,15 @@ renderBaseHp();
 
 /* ---------- Etiquetas 3D (Entrada / Base) ---------- */
 const labels = [
-  { el: $('label-entrance'), pos: map.entrancePosition.clone().add(new THREE.Vector3(0, 5.6, 0)) },
-  { el: $('label-base'), pos: map.basePosition.clone().add(new THREE.Vector3(1.4, 8.4, -1.5)) },
+  { el: $('label-entrance'), off: new THREE.Vector3(0, 5.6, 0) },
+  { el: $('label-base'), off: new THREE.Vector3(1.4, 8.4, -1.5) },
 ];
 const tmp = new THREE.Vector3();
 function updateLabels() {
   const w = window.innerWidth;
   const h = window.innerHeight;
   for (const l of labels) {
-    tmp.copy(l.pos).project(camera);
+    tmp.copy(l === labels[0] ? map.entrancePosition : map.basePosition).add(l.off).project(camera);
     const inFront = tmp.z < 1;
     l.el.style.visibility = inFront && inGame ? 'visible' : 'hidden';
     if (inFront && inGame) {
@@ -336,7 +372,6 @@ function frame() {
 frame();
 
 window.__pirate = { scene, camera, renderer, map, rig, MAP, enemies };
-$('map-list').innerHTML = MAPS.map((m) => `<li class="${m.available ? 'on' : 'off'}">${m.available ? '⚓' : '🔒'} ${m.name} <small>${m.available ? 'Chefe: ' + m.boss : 'Em breve'}</small></li>`).join('');
 renderMenuCoins();
 addEventListener('pagehide', () => meta.save());
 document.addEventListener('visibilitychange', () => { if (document.hidden) meta.save(); });

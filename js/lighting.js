@@ -26,3 +26,14 @@ export function setupLighting(scene) {
 
   return { hemi, sun };
 }
+
+export function tuneLighting({ hemi, sun }, scene, L) {
+  scene.background.set(L.sky);
+  scene.fog.color.set(L.sky);
+  [scene.fog.near, scene.fog.far] = L.fog;
+  hemi.color.set(L.hemi[0]);
+  hemi.groundColor.set(L.hemi[1]);
+  hemi.intensity = L.hemi[2];
+  sun.color.set(L.sun[0]);
+  sun.intensity = L.sun[1];
+}

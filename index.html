@@ -29,7 +29,7 @@
         <span class="map-card-name">Ilha dos Náufragos</span>
         <span class="map-card-note">Defenda a ilha, evolua seus marinheiros e enfrente as waves de inimigos.</span>
       </p>
-      <ul id="map-list" class="map-list" aria-label="Mapas"></ul>
+      <div id="map-picker" class="map-picker" aria-label="Selecionar mapa"></div>
       <button id="btn-start" class="btn btn-primary" type="button">Entrar na ilha</button>
       <button id="btn-shop" class="btn btn-small" type="button">Loja e Coleção</button>
       <span id="menu-coins" class="menu-coins"></span>
@@ -39,7 +39,7 @@
   <!-- Interface durante a exploração -->
   <div id="hud" class="hud" hidden>
     <div class="hud-top">
-      <div class="hud-map">Ilha dos Náufragos</div>
+      <div class="hud-map" id="hud-map-name">Ilha dos Náufragos</div>
       <section class="wave-hud" aria-live="polite">
         <div><strong>Moedas:</strong> <span id="hud-money">0</span></div>
         <div><strong>Wave:</strong> <span id="hud-wave">0</span> / 10</div>

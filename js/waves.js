@@ -2,18 +2,18 @@ export const MAX_WAVES = 10;
 export const INTERMISSION_SECONDS = 5;
 export const BOSS_INTERVAL = 10;
 export const BOSS_ROSTER = ['cursedCaptain'];
-export const KILL_REWARDS = Object.freeze({ crab: 5, slime: 10, cursedCaptain: 250 });
+export const KILL_REWARDS = Object.freeze({ crab: 5, slime: 10, skeleton: 6, ghost: 12, magmaling: 8, obsidian: 20, deepling: 7, cursedCaptain: 100, lavaTitan: 150, kraken: 250 });
 
 export const bossFor = (n) =>
   n % BOSS_INTERVAL === 0 ? BOSS_ROSTER[(n / BOSS_INTERVAL - 1) % BOSS_ROSTER.length] : null;
 
 /** Produces a deterministic, progressively harder wave composition. */
-export function createWave(number) {
+export function createWave(number, roster = { basic: 'crab', tough: 'slime', boss: 'cursedCaptain' }) {
   if (!Number.isInteger(number) || number < 1) throw new RangeError('Wave deve começar em 1.');
   const count = 5 + (number - 1) * 2;
   const slimeCount = Math.min(Math.floor((number - 1) / 2), Math.floor(count / 2));
-  const enemies = Array.from({ length: count }, (_, i) => i % 3 === 2 && i < slimeCount * 3 ? 'slime' : 'crab');
-  const boss = bossFor(number);
+  const enemies = Array.from({ length: count }, (_, i) => i % 3 === 2 && i < slimeCount * 3 ? roster.tough : roster.basic);
+  const boss = number === MAX_WAVES ? roster.boss : null;
   if (boss) enemies.push(boss);
   return {
     number, boss,
@@ -24,8 +24,9 @@ export function createWave(number) {
 }
 
 export class WaveManager {
-  constructor({ enemies, onChange = () => {}, onReward = () => {}, onVictory = () => {}, onDefeat = () => {} }) {
+  constructor({ enemies, roster = { basic: 'crab', tough: 'slime', boss: 'cursedCaptain' }, onChange = () => {}, onReward = () => {}, onVictory = () => {}, onDefeat = () => {} }) {
     this.enemies = enemies;
+    this.roster = roster;
     this.onChange = onChange;
     this.onReward = onReward;
     this.onVictory = onVictory;
@@ -52,7 +53,7 @@ export class WaveManager {
   startWave(number) {
     if (this.state !== 'ready' || !Number.isInteger(number) || number < 1 || number > MAX_WAVES) return false;
     this.number = number;
-    this.wave = createWave(number);
+    this.wave = createWave(number, this.roster);
     this.spawnIndex = 0;
     this.remaining = this.wave.enemies.length;
     this.spawnTimer = 0;

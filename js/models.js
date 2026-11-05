@@ -484,3 +484,92 @@ export function createBase() {
 
   return g;
 }
+
+
+export function createTomb(rng) {
+  const g = new THREE.Group(), c = pick(rng, [C.rock, C.rockDark, C.rockLight]);
+  add(g, new THREE.BoxGeometry(0.9, 1.2, 0.3), c, { y: 0.6 });
+  add(g, new THREE.CylinderGeometry(0.45, 0.45, 0.3, 8), c, { y: 1.2, rx: Math.PI / 2 });
+  add(g, new THREE.BoxGeometry(1.2, 0.12, 1.6), C.rockDark, { y: 0.06, z: 0.7 });
+  g.rotation.z = rand(rng, -0.1, 0.1);
+  return g;
+}
+export function createCross(rng) {
+  const g = new THREE.Group();
+  add(g, new THREE.BoxGeometry(0.14, 1.6, 0.14), C.woodDark, { y: 0.8 });
+  add(g, new THREE.BoxGeometry(0.8, 0.14, 0.14), C.woodDark, { y: 1.2 });
+  g.rotation.set(rand(rng, -0.15, 0.15), 0, rand(rng, -0.2, 0.2));
+  return g;
+}
+export function createDeadTree(rng, s = 1) {
+  const g = new THREE.Group();
+  add(g, new THREE.CylinderGeometry(0.12, 0.28, 3, 5), C.woodDark, { y: 1.5, rz: rand(rng, -0.1, 0.1) });
+  for (let i = 0; i < 4; i++)
+    add(g, new THREE.BoxGeometry(1.3, 0.1, 0.1), C.woodDark, { y: 1.7 + i * 0.35, ry: i * 1.6 + rng(), rz: rand(rng, 0.4, 1) });
+  g.rotation.y = rng() * 6;
+  g.scale.setScalar(s);
+  return g;
+}
+export function createBones(rng) {
+  const g = new THREE.Group();
+  const s = createSkull(0.5); s.position.y = 0.25; s.rotation.y = rng() * 6; g.add(s);
+  const b = createCrossbones(0.6); b.position.set(0.9, 0.08, 0.4); b.rotation.x = -Math.PI / 2; g.add(b);
+  return g;
+}
+export function createPillar(rng) {
+  const g = new THREE.Group(), h = rand(rng, 1.4, 3.2);
+  add(g, new THREE.BoxGeometry(1.2, 0.3, 1.2), C.stoneDark, { y: 0.15 });
+  add(g, new THREE.CylinderGeometry(0.45, 0.5, h, 7), C.stone, { y: h / 2 + 0.3, rz: rand(rng, -0.05, 0.05) });
+  [0, 1].forEach(() => add(g, G.rock, C.stoneDark, { x: rand(rng, -1, 1), z: rand(rng, -1, 1), y: 0.15, sx: 0.3, sy: 0.2, sz: 0.3 }));
+  return g;
+}
+export function createVolcano(s = 1) {
+  const g = new THREE.Group();
+  add(g, new THREE.CylinderGeometry(1.8, 6.5, 9, 9), C.rockDark, { y: 4.5 });
+  add(g, new THREE.CylinderGeometry(1.6, 1.7, 0.3, 9), 0xff5a1c, { y: 8.9, cast: false, matOpts: { emissive: 0xff4a10, emissiveIntensity: 1.2 } });
+  const l = new THREE.PointLight(0xff6a20, 40, 30, 2); l.position.y = 10; g.add(l);
+  g.scale.setScalar(s);
+  return g;
+}
+export function createFortTower(s = 1) {
+  const g = new THREE.Group();
+  add(g, new THREE.BoxGeometry(3.6, 3, 3.6), C.stoneDark, { y: -0.2 });
+  add(g, new THREE.BoxGeometry(3, 6, 3), C.stone, { y: 3.5 });
+  add(g, new THREE.BoxGeometry(3.5, 0.4, 3.5), C.stoneLight, { y: 6.7 });
+  [[-1.5,-1.5],[1.5,-1.5],[-1.5,1.5],[1.5,1.5],[0,-1.6],[0,1.6],[-1.6,0],[1.6,0]].forEach(([x, z]) =>
+    add(g, new THREE.BoxGeometry(0.7, 0.8, 0.7), C.stoneDark, { x, y: 7.3, z }));
+  add(g, new THREE.BoxGeometry(0.5, 0.9, 0.1), C.black, { y: 4, z: 1.52 });
+  const f = createFlagPole(2.4); f.position.y = 7.1; g.add(f);
+  g.scale.setScalar(s);
+  return g;
+}
+export function createWall(len) {
+  const g = new THREE.Group();
+  add(g, new THREE.BoxGeometry(len, 3.2, 1.2), C.stone, { y: 1.1 });
+  for (let x = -len / 2 + 0.5; x < len / 2; x += 1.4) add(g, new THREE.BoxGeometry(0.7, 0.7, 1.2), C.stoneDark, { x, y: 3.05 });
+  return g;
+}
+export function createTentacle(rng, s = 1) {
+  const g = new THREE.Group(), segs = [], phase = rng() * 6, bend = rand(rng, 0.1, 0.3);
+  let parent = g;
+  for (let i = 0; i < 6; i++) {
+    const seg = new THREE.Group(); seg.position.y = i ? 1 : 0; parent.add(seg);
+    add(seg, new THREE.CylinderGeometry(0.42 - i * 0.06, 0.48 - i * 0.06, 1.05, 6), i % 2 ? 0x8a4fb0 : 0x7a3fa0, { y: 0.5 });
+    if (i < 4) add(seg, G.coconut, 0xe8b4f0, { x: 0.4 - i * 0.05, y: 0.5 });
+    segs.push(seg); parent = seg;
+  }
+  g.scale.setScalar(s);
+  g.userData.update = (t) => segs.forEach((sg, i) => (sg.rotation.z = bend + Math.sin(t * 1.3 + phase + i * 0.6) * 0.22));
+  return g;
+}
+export function createKraken(rng) {
+  const g = new THREE.Group(), ts = [];
+  const head = add(g, new THREE.SphereGeometry(3, 8, 6), 0x7a3fa0, { y: 3, sy: 1.2 });
+  [-1, 1].forEach((z) => add(g, new THREE.SphereGeometry(0.5, 6, 4), C.yellow, { x: 2.7, y: 3.6, z: z * 1.2, matOpts: { emissive: C.yellow, emissiveIntensity: 1 } }));
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2, t = createTentacle(rng, 1.6);
+    t.position.set(Math.cos(a) * 2.4, 0, Math.sin(a) * 2.4); t.rotation.y = -a; g.add(t); ts.push(t);
+  }
+  g.userData.update = (t) => { ts.forEach((x) => x.userData.update(t)); head.position.y = 3 + Math.sin(t) * 0.1; };
+  return g;
+}

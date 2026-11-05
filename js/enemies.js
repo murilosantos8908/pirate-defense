@@ -40,7 +40,25 @@ export const ENEMY_TYPES = {
     barY: 1.5,
     build: buildSlime,
   },
+  skeleton: { name: 'Esqueleto', hp: 55, speed: 2.6, damage: 1, barY: 1.9, build: gen({ color: 0xe8e2cf, size: 0.6, tall: 2 }) },
+  ghost: { name: 'Fantasma', hp: 90, speed: 2.0, damage: 2, barY: 2.2, build: gen({ color: 0xbfeaff, emissive: 0x5fb0ff, opacity: 0.55, size: 0.8, tall: 1.5, float: 0.5 }) },
+  magmaling: { name: 'Magmaling', hp: 80, speed: 2.4, damage: 1, barY: 1.6, build: gen({ color: 0x3a2a28, emissive: 0xff4a10, size: 0.8 }) },
+  obsidian: { name: 'Obsidiana', hp: 180, speed: 1.5, damage: 3, barY: 2.2, build: gen({ color: 0x2a2630, emissive: 0xff6a20, size: 1.1, tall: 1.3 }) },
+  deepling: { name: 'Abissal', hp: 70, speed: 2.5, damage: 1, barY: 1.7, build: gen({ color: 0x2a8fb0, emissive: 0x0f5f80, size: 0.8, tall: 1.2 }) },
+  cursedCaptain: { name: 'Capitão Amaldiçoado', boss: true, hp: 700, speed: 1.1, damage: 5, barY: 3.2, build: gen({ color: 0x3b2a5a, emissive: 0x6a2aff, size: 1.7, tall: 1.5 }) },
+  lavaTitan: { name: 'Titã de Lava', boss: true, hp: 1000, speed: 1.0, damage: 6, barY: 3.6, build: gen({ color: 0x2a2020, emissive: 0xff4a10, size: 2, tall: 1.6 }) },
+  kraken: { name: 'Kraken', boss: true, hp: 1500, speed: 0.9, damage: 10, barY: 4, build: gen({ color: 0x7a3fa0, emissive: 0x40206a, size: 2.1, tall: 1.5 }) },
 };
+
+function gen({ color, eye = 0xffffff, emissive = 0x000000, opacity = 1, size = 1, tall = 1, float = 0 }) {
+  return (model) => {
+    const j = new THREE.Group(); model.add(j);
+    const y = 0.5 * size * tall + float;
+    add(j, G.body, color, { y, sx: size, sy: size * tall, sz: size, matOpts: { transparent: opacity < 1, opacity, emissive, emissiveIntensity: 0.6 } });
+    [-1, 1].forEach((s) => add(j, G.eye, eye, { x: 0.4 * size, y: y + 0.25 * size * tall, z: 0.2 * size * s, sx: size, sy: size, sz: size }));
+    return (t) => { j.position.y = float ? Math.sin(t * 3) * 0.12 : Math.abs(Math.sin(t * 6)) * 0.06; };
+  };
+}
 
 function buildCrab(model) {
   add(model, G.body, C.red, { y: 0.42, sx: 1.05, sy: 0.55, sz: 0.85 });

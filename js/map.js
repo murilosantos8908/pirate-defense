@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { COLORS as C, MAP } from './config.js';
 import { mat, add, makeRng, rand } from './utils.js';
 import * as M from './models.js';
+import { createFx } from './fx.js';
 
 const { radiusX: RX, radiusZ: RZ, groundY: GY, pathY: PY, pathWidth: PW, waterY: WY } = MAP;
 
@@ -84,7 +85,7 @@ function ribbonMesh(curve, width, y, color, segments = 260) {
 /* Mapa completo                                                       */
 /* ------------------------------------------------------------------ */
 
-export function buildIslandMap(scene) {
+export function buildIslandMap(scene, theme = {}) {
   const rng = makeRng(20241104);
   const world = new THREE.Group();
   world.name = MAP.name;
@@ -97,12 +98,12 @@ export function buildIslandMap(scene) {
   seaGeo.rotateX(-Math.PI / 2);
   const seaPos = seaGeo.attributes.position;
   const seaBase = Float32Array.from(seaPos.array);
-  const sea = new THREE.Mesh(seaGeo, mat(C.sea, { roughness: 0.55 }));
+  const sea = new THREE.Mesh(seaGeo, mat(C.sea, { roughness: 0.55, ...theme.seaOpts }));
   sea.position.y = WY;
   sea.receiveShadow = true;
   world.add(sea);
 
-  const farSea = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), mat(C.sea, { roughness: 0.55 }));
+  const farSea = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), mat(C.sea, { roughness: 0.55, ...theme.seaOpts }));
   farSea.rotation.x = -Math.PI / 2;
   farSea.position.y = WY - 0.02;
   world.add(farSea);
@@ -224,9 +225,9 @@ export function buildIslandMap(scene) {
   world.add(pier);
 
   const ship = M.createShip();
-  ship.position.set(-35.5, WY - 0.1, 17);
+  ship.position.set(startP.x - 8.5, WY - 0.1, startP.z + 7 * (Math.sign(startP.z) || 1));
   ship.rotation.y = 0.12;
-  world.add(ship);
+  if (!theme.noShips) world.add(ship);
   updaters.push((t) => {
     ship.position.y = WY - 0.1 + Math.sin(t * 1.2) * 0.07;
     ship.rotation.z = Math.sin(t * 0.9) * 0.015;
@@ -306,6 +307,8 @@ export function buildIslandMap(scene) {
     }
   };
 
+  theme.deco?.({ world, rng, rand, add, mat, M, scatter, reserved, updaters, curve, startP, gateP, gn, GY, WY, RX, RZ, MAP, islandRadius });
+
   // Manchas de grama mais escura
   for (let i = 0; i < 14; i++) {
     const a = rng() * Math.PI * 2;
@@ -317,16 +320,13 @@ export function buildIslandMap(scene) {
     world.add(patch);
   }
 
-  // Palmeiras
-  scatter(18, { rMin: 0.25, rMax: 0.98, spacing: 3.6, pathClear: 2.4 }, (x, z) => {
-    const palm = M.createPalm(rng, rand(rng, 0.9, 1.35));
-    palm.position.set(x, GY, z);
-    world.add(palm);
+  const Tree = theme.dead ? M.createDeadTree : M.createPalm;
+  const [nIn, nOut] = theme.trees ?? [18, 8];
+  scatter(nIn, { rMin: 0.25, rMax: 0.98, spacing: 3.6, pathClear: 2.4 }, (x, z) => {
+    const p = Tree(rng, rand(rng, 0.9, 1.35)); p.position.set(x, GY, z); world.add(p);
   });
-  scatter(8, { rMin: 1.03, rMax: 1.12, spacing: 5, pathClear: 2.4 }, (x, z) => {
-    const palm = M.createPalm(rng, rand(rng, 1, 1.3));
-    palm.position.set(x, GY - 0.02, z);
-    world.add(palm);
+  scatter(nOut, { rMin: 1.03, rMax: 1.12, spacing: 5, pathClear: 2.4 }, (x, z) => {
+    const p = Tree(rng, rand(rng, 1, 1.3)); p.position.set(x, GY - 0.02, z); world.add(p);
   });
 
   // Rochas
@@ -427,7 +427,7 @@ export function buildIslandMap(scene) {
   }
 
   // Acampamento dos náufragos
-  {
+  if (!theme.noCamp) {
     const cx = MAP.campPosition.x;
     const cz = MAP.campPosition.z;
     const tent = M.createTent();
@@ -459,7 +459,7 @@ export function buildIslandMap(scene) {
   const wreck = M.createShip({ wreck: true });
   wreck.position.set(-9, WY - 0.75, 26);
   wreck.rotation.set(0.12, 0.6, 0.28);
-  world.add(wreck);
+  if (!theme.noShips) world.add(wreck);
   updaters.push((t) => {
     wreck.position.y = WY - 0.75 + Math.sin(t * 1.0) * 0.05;
   });
@@ -490,6 +490,8 @@ export function buildIslandMap(scene) {
       if (c.position.x > 130) c.position.x = -130;
     }
   });
+
+  for (const f of theme.fx || []) updaters.push(createFx(world, f));
 
   return {
     name: MAP.name,
