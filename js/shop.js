@@ -111,7 +111,7 @@ export function createShopUi(meta, { onTeamChange = () => {}, onCodeSubmit = () 
 
   function render() {
     const menuCoins = document.getElementById('menu-coins');
-    if (menuCoins) menuCoins.textContent = `Moedas: ${meta.coins}`;
+    if (menuCoins) menuCoins.textContent = `${meta.coins}`;
     root.innerHTML = `<div class="sh-top">
       <button class="btn btn-small" data-a="tab" data-id="shop">Loja</button>
       <button class="btn btn-small" data-a="tab" data-id="coll">Coleção</button>

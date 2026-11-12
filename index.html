@@ -6,6 +6,7 @@
   <title>Pirate Defense – Ilha dos Náufragos</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%B4%E2%80%8D%E2%98%A0%EF%B8%8F%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/menu.css" />
 
   <script type="importmap">
     { "imports": { "three": "./vendor/three.module.js" } }
@@ -20,21 +21,38 @@
 
   <!-- Menu inicial -->
   <main id="menu" class="menu">
-    <section class="menu-panel">
-      <h1 class="logo">
-        <span class="logo-line">PIRATE</span>
-        <span class="logo-line">DEFENSE</span>
-      </h1>
-      <p class="map-card">
-        <span class="map-card-name">Ilha dos Náufragos</span>
-        <span class="map-card-note">Defenda a ilha, evolua seus marinheiros e enfrente as waves de inimigos.</span>
-      </p>
-      <div id="map-picker" class="map-picker" aria-label="Selecionar mapa"></div>
-      <button id="btn-start" class="btn btn-primary" type="button">Entrar na ilha</button>
-      <button id="btn-shop" class="btn btn-small" type="button">Loja e Coleção</button>
-      <span id="menu-coins" class="menu-coins"></span>
-    </section>
-  </main>
+  <header class="mm-top">
+    <div class="mm-player">
+      <button class="mm-avatar mm-btn" data-go="profile">🏴‍☠️</button>
+      <div><input id="mm-name" maxlength="14" aria-label="Nome do jogador">
+        <div class="mm-xp"><i id="mm-xpfill"></i><b>Nv <span id="mm-lvl">1</span></b></div></div>
+    </div>
+    <h1 class="logo"><span class="logo-line">PIRATE</span><span class="logo-line">DEFENSE</span></h1>
+    <div class="mm-right">
+      <span class="mm-coins">🪙 <span id="menu-coins"></span><button class="mm-plus mm-btn" data-go="shop">+</button></span>
+      <button id="mm-gift" class="mm-ico mm-btn" data-go="gift" title="Recompensa diária">🎁</button>
+      <button class="mm-ico mm-btn" data-go="profile" title="Perfil">👤</button>
+    </div>
+  </header>
+  <nav class="mm-side">
+    <button class="mm-sq mm-btn" data-go="settings">⚙️<small>Ajustes</small></button>
+    <button class="mm-sq mm-btn" data-go="minigames">🎲<small>Minijogos</small></button>
+    <button id="mm-shop" class="mm-sq mm-btn" data-go="shop">🛒<small>Loja</small></button>
+    <button class="mm-sq mm-btn" data-go="achv">🏆<small>Conquistas</small></button>
+  </nav>
+  <nav class="mm-bottom">
+    <button id="mm-crew" class="mm-b c1 mm-btn" data-go="crew"><span>⚓</span>TRIPULAÇÃO</button>
+    <button class="mm-b c2 mm-btn" data-go="heroes"><span>🦸</span>HERÓIS</button>
+    <button class="mm-b play mm-btn" data-go="play"><span>▶</span>JOGAR</button>
+    <button class="mm-b c4 mm-btn" data-go="social"><span>👥</span>SOCIAL</button>
+    <button id="mm-pow" class="mm-b c5 mm-btn" data-go="powers"><span>⚡</span>PODERES</button>
+    <button class="mm-b c6 mm-btn" data-go="codex"><span>📖</span>CÓDICE</button>
+  </nav>
+  <!-- usados pelo main.js (mantidos ocultos) -->
+  <div hidden><span class="map-card-name"></span><span class="map-card-note"></span>
+    <div id="map-picker"></div>
+    <button id="btn-start"></button><button id="btn-shop"></button></div>
+</main>
 
   <!-- Interface durante a exploração -->
   <div id="hud" class="hud" hidden>

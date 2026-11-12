@@ -9,6 +9,7 @@ import { Meta, MAX_TEAM } from './collections.js';
 import { createShopUi } from './shop.js';
 import { WaveManager, rewardForKill, MAX_WAVES } from './waves.js';
 import { MAPS, applyTheme } from './maps.js';
+import { initMenu } from './menu.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -228,7 +229,7 @@ function selectMap(i) {
 selectMap(0);
 
 function renderMenuCoins() {
-  $('menu-coins').textContent = `🪙 ${meta.coins}`;
+  $('menu-coins').textContent = `${meta.coins}`;
 }
 
 function toast(text) {
@@ -369,6 +370,7 @@ function frame() {
 frame();
 
 window.__pirate = { scene, camera, renderer, map, rig, MAP, enemies };
+initMenu({ meta, shop, selectMap, startGame, isInGame: () => inGame });
 renderMenuCoins();
 addEventListener('pagehide', () => meta.save());
 document.addEventListener('visibilitychange', () => { if (document.hidden) meta.save(); });
