@@ -60,15 +60,16 @@ export class Meta {
     this.rng = rng;
     let s = null;
     try { s = JSON.parse(storage?.getItem(KEY)); } catch { /* save inválido */ }
-    this.state = s || { coins: 10000, owned: { sailor: { level: 1, copies: 0 } }, team: ['sailor'] };
+    this.state = s || { coins: 0, owned: { sailor: { level: 1, copies: 0 } }, team: ['sailor'] };
     this.state.upgrades = { ...(this.state.upgrades || {}) };
     this.state.stats = { runs: 0, wins: 0, bestWave: 0, kills: 0, bosses: 0, ...(this.state.stats || {}) };
     if (!this.state.owned || !this.state.owned.sailor) this.state.owned = { ...(this.state.owned || {}), sailor: { level: 1, copies: 0 } };
     this.state.team = (Array.isArray(this.state.team) ? this.state.team : []).filter((id) => this.state.owned[id]);
     if (!this.state.team.length) this.state.team = ['sailor'];
-    // Bonus de teste: eleva saves existentes sem apagar o progresso.
-    if (this.state.coins < 10000) {
-      this.state.coins = 10000;
+    // Remove uma vez o bônus de teste concedido por versões anteriores.
+    if (!this.state.testMoneyBonusRemoved) {
+      this.state.coins = Math.max(0, (this.state.coins || 0) - 10000);
+      this.state.testMoneyBonusRemoved = true;
       this.save();
     }
   }

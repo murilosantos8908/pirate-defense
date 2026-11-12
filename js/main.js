@@ -62,7 +62,7 @@ let gameOver = false;
 let money = 250;
 let run = { kills: 0, bosses: 0, coins: 0 };
 let announced = 0;
-const testCodes = { money: false, levels: false };
+const testCodes = { levels: false };
 let defenders = null;
 const meta = new Meta();
 let shop = null;
@@ -140,18 +140,16 @@ const enemies = new EnemyManager(scene, map, {
   },
 });
 function renderMoney() {
-  $('hud-money').textContent = testCodes.money ? '∞' : money;
+  $('hud-money').textContent = money;
   if (defenders?.selected) defenders.refreshInfo();
 }
 function payMoney(amount) {
-  if (testCodes.money) return true;
   if (money < amount) return false;
   money -= amount;
   renderMoney();
   return true;
 }
 function refundMoney(amount) {
-  if (testCodes.money) return;
   money += amount;
   renderMoney();
 }
@@ -191,10 +189,9 @@ defenders = new DefenderManager({
 defenders.setTeam(meta.teamEntries());
 shop = createShopUi(meta, {
   onTeamChange: () => defenders.setTeam(meta.teamEntries()),
-  getCodeStatus: () => ({ money: testCodes.money, levels: testCodes.levels }),
+  getCodeStatus: () => ({ levels: testCodes.levels }),
   onCodeSubmit: (raw) => {
     const code = raw.trim().toLowerCase();
-    if (code === 'dinheiro') { testCodes.money = true; renderMoney(); return 'Código dinheiro ativado: compras da partida gratuitas.'; }
     if (code === 'niveis') { testCodes.levels = true; return 'Código niveis ativado: seleção de wave liberada.'; }
     return 'Código inválido.';
   },

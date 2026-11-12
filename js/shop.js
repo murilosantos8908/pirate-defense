@@ -103,7 +103,6 @@ export function createShopUi(meta, { onTeamChange = () => {}, onCodeSubmit = () 
     return `<h2>Códigos de teste</h2><p>Digite um código para liberar recursos de teste nesta sessão.</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><input id="code-input" aria-label="Código" autocomplete="off" placeholder="Digite um código">
       <button class="btn btn-small" data-a="code">Ativar código</button></div><p>${codeMessage}</p>
-      <p>dinheiro: ${status.money ? 'ativado · compras da partida gratuitas' : 'bloqueado'}</p>
       <p>niveis: ${status.levels ? 'ativado · seleção de wave liberada' : 'bloqueado'}</p>
       ${status.levels ? `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label for="wave-select">Escolher wave</label>
         <select id="wave-select">${Array.from({ length: MAX_WAVES }, (_, i) => `<option value="${i + 1}">Wave ${i + 1}</option>`).join('')}</select>
