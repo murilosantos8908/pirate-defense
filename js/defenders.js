@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { COLORS as C } from './config.js';
 import { add } from './utils.js';
 import { EXTRA_TYPES } from './defenders_extra.js';
+import { foldMods, pathsFor, canBuy } from './upgrades.js';
+import { UpgradePanel } from './upgradeUi.js';
 
 const G = {
   limb: new THREE.CylinderGeometry(0.1, 0.1, 0.5, 6),
@@ -511,6 +513,8 @@ function buildMarkswoman(model, level = 1) {
 /* Defensor                                                            */
 /* ------------------------------------------------------------------ */
 const RING = new THREE.RingGeometry(0.96, 1, 64).rotateX(-Math.PI / 2);
+const BADGE = new THREE.TorusGeometry(1, 0.04, 6, 24);
+const PATH_COLORS = [0xff5a4f, 0x3a8dde, 0xffc83d];
 
 function makeRing(range, color, opacity = 0.9) {
   const m = new THREE.Mesh(
@@ -537,6 +541,9 @@ export class Defender {
     this.upgradeInvestment = 0;
     this.skillCooldowns = new Map();
     this.kills = 0;
+    this.up = [0, 0, 0];
+    this.mods = foldMods(typeId, this.up);
+    this.targetMode = 'first';
 
     this.root = new THREE.Group();
     this.root.position.copy(position);
@@ -563,12 +570,24 @@ export class Defender {
   }
 
   _applyLevelStats() {
-    const stats = statsFor(this.type, this.level);
-    this.damage = stats.damage;
-    this.range = stats.range;
-    this.attackSpeed = stats.attackSpeed;
+    const stats = statsFor(this.type, this.level), mods = this.mods;
+    this.damage = Math.round(stats.damage * mods.dmg);
+    this.range = stats.range * mods.range;
+    this.attackSpeed = stats.attackSpeed * mods.speed;
     this.swingDur = Math.min(0.5, 0.7 / this.attackSpeed);
     this.ring?.scale.set(this.range, 1, this.range);
+  }
+
+  buyPath(p, cost) {
+    this.up[p]++;
+    this.upgradeInvestment += cost;
+    this.mods = foldMods(this.type, this.up);
+    this._applyLevelStats();
+    const ring = new THREE.Mesh(BADGE, new THREE.MeshBasicMaterial({ color: PATH_COLORS[p], transparent: true, opacity: 0.85 }));
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = 0.06 + this.up[p] * 0.05;
+    ring.scale.setScalar(0.45 + this.up[p] * 0.1 + p * 0.04);
+    this.root.add(ring);
   }
 
   get nextUpgrade() {
@@ -601,16 +620,14 @@ export class Defender {
 
   /** Inimigo vivo mais adiantado no caminho dentro do alcance. */
   findTarget(enemies) {
-    const p = this.root.position;
-    let best = null;
-    let bestDist = -1;
+    const p = this.root.position, mode = this.targetMode;
+    let best = null, bestScore = -Infinity;
     for (const e of enemies) {
       if (!e.alive) continue;
       const d = Math.hypot(e.position.x - p.x, e.position.z - p.z);
-      if (d <= this.range && e.distance > bestDist) {
-        best = e;
-        bestDist = e.distance;
-      }
+      if (d > this.range) continue;
+      const score = mode === 'last' ? -e.distance : mode === 'close' ? -d : mode === 'strong' ? e.hp : e.distance;
+      if (score > bestScore) { bestScore = score; best = e; }
     }
     return best;
   }
@@ -787,7 +804,6 @@ export class DefenderManager {
 
   /* ---------- internos ---------- */
   _onHit = (enemy, defender) => {
-    const wasAlive = enemy.alive;
     const attack = defender.resolveAttack();
     if (defender.def.projectile) {
       const mesh = new THREE.Mesh(BULLET, BULLET_MAT);
@@ -805,7 +821,13 @@ export class DefenderManager {
       this.bullets.push({ mesh, from, to, t: 0 });
     }
     this._fx(enemy.position.clone().setY(0.7), defender.def.projectile ? 0xffb347 : 0xffffff, defender.def.projectile ? 0.4 : 0.7);
-    this._applyDamage(enemy, defender, Math.round(attack.damage * this.damageMult), wasAlive);
+    const mods = defender.mods, damage = Math.round((attack.damage + mods.bleed) * this.damageMult);
+    for (let k = 0; k < mods.multi; k++) if (enemy.alive) this._applyDamage(enemy, defender, damage, true);
+    if (mods.splash) for (const other of this.enemies.enemies) {
+      if (other !== enemy && other.alive && other.position.distanceTo(enemy.position) <= mods.splash) {
+        this._applyDamage(other, defender, Math.round(damage * 0.5), true);
+      }
+    }
   };
 
   _fx(pos, color, size = 0.5) {
@@ -827,6 +849,9 @@ export class DefenderManager {
     if (wasAlive && !enemy.alive) {
       this._fx(enemy.position.clone().setY(0.6), enemy.def.boss ? 0x5cffd9 : 0xff4b3e, enemy.def.boss ? 3 : 1.1);
       defender.kills++;
+      const mods = defender.mods; let bounty = mods.bounty;
+      if (mods.lucky && Math.random() < mods.lucky) bounty *= 2;
+      if (bounty) this.refund(bounty);
       if (this.selected === defender) this._renderInfo();
     }
   }
@@ -931,6 +956,7 @@ export class DefenderManager {
       if (e.target.closest('[data-sell]')) this._sellSelected();
     });
     document.body.appendChild(this.info);
+    this.panel = new UpgradePanel(this);
   }
 
   _renderBar() {
@@ -955,27 +981,18 @@ export class DefenderManager {
   }
 
   _renderInfo() {
-    const d = this.selected;
-    this.info.hidden = !d;
-    if (!d) return;
-    const next = d.nextUpgrade;
-    const unlocked = (d.def.skills || []).filter((skill) => d.level >= skill.unlockLevel);
-    const nextSkill = (d.def.skills || []).find((skill) => skill.unlockLevel === d.level + 1);
-    const abilityText = unlocked.length
-      ? unlocked.map((skill) => `${skill.name}: ${skill.description}`).join('<br>')
-      : nextSkill ? `Desbloqueia no nível ${nextSkill.unlockLevel}: ${nextSkill.name}` : d.def.levels[d.level - 1]?.ability || 'Nível máximo';
-    const upgradeCost = next?.upgradeCost;
-    this.info.innerHTML =
-      `<h3>${d.name}</h3><p>${d.def.desc}</p><p><strong>Nível ${d.level} / ${d.def.levels.length}</strong></p><dl>` +
-      `<dt>Dano</dt><dd>${d.damage}</dd>` +
-      `<dt>Alcance</dt><dd>${d.range.toFixed(1)}</dd>` +
-      `<dt>Vel. de ataque</dt><dd>${d.attackSpeed.toFixed(1)}/s</dd>` +
-      `<dt>Nível</dt><dd>${d.level}</dd>` +
-      `<dt>Inimigos abatidos</dt><dd>${d.kills}</dd></dl>` +
-      `<p class="dm-ability"><strong>Habilidade:</strong> ${abilityText}</p>` +
-      `<div class="dm-actions">` +
-      `<button class="btn btn-small" type="button" data-upgrade ${!next || this.getMoney() < upgradeCost ? 'disabled' : ''}>${next ? `Melhorar · ${upgradeCost} moedas` : 'Nível máximo'}</button>` +
-      `<button class="btn btn-small btn-ghost" type="button" data-sell>Vender · ${this._sellValue(d)} moedas</button></div>`;
+    this.info.hidden = true;
+    this.panel.render(this.selected);
+  }
+
+  buyPath(defender, pathIndex) {
+    const paths = pathsFor(defender.type);
+    if (!paths || canBuy(defender.up, pathIndex) !== 'ok') return;
+    const upgrade = paths[pathIndex].tiers[defender.up[pathIndex]];
+    if (!upgrade || !this.pay(upgrade.cost)) return;
+    defender.buyPath(pathIndex, upgrade.cost);
+    this._fx(defender.root.position.clone().setY(1), PATH_COLORS[pathIndex], 1.8);
+    this._renderInfo();
   }
 
   _upgradeSelected() {
