@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CAMERA, MAP } from './config.js';
+import { polish, polishLights } from './visuals.js';
 import { setupLighting, tuneLighting } from './lighting.js';
 import { buildIslandMap } from './map.js';
 import { CameraRig } from './camera.js';
@@ -43,6 +44,7 @@ const camera = new THREE.PerspectiveCamera(
   CAMERA.far
 );
 const lights = setupLighting(scene);
+polishLights(lights);
 let mapIndex = 0;
 let map;
 function loadMap(i) {
@@ -51,6 +53,7 @@ function loadMap(i) {
   applyTheme(i);
   tuneLighting(lights, scene, MAPS[i].light);
   map = buildIslandMap(scene, MAPS[i]);
+  polish(map.group);
 }
 loadMap(0);
 const rig = new CameraRig(camera, renderer.domElement);
