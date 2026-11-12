@@ -1,5 +1,6 @@
-import * as THREE from 'three';
+﻿import * as THREE from 'three';
 import { COLORS as C } from './config.js';
+import { ENEMY_MODELS } from './enemy_models.js';
 import { add } from './utils.js';
 
 /* ------------------------------------------------------------------ */
@@ -15,7 +16,7 @@ const G = {
 };
 
 /* ------------------------------------------------------------------ */
-/* Definições (atributos + aparência). Para criar outro inimigo,       */
+/* DefiniÃ§Ãµes (atributos + aparÃªncia). Para criar outro inimigo,       */
 /* basta adicionar uma entrada aqui.                                   */
 /* ------------------------------------------------------------------ */
 export const ENEMY_TYPES = {
@@ -28,7 +29,7 @@ export const ENEMY_TYPES = {
     build: buildCrab,
   },
   cursedCaptain: {
-    name: 'Capitão Amaldiçoado', boss: true,
+    name: 'CapitÃ£o AmaldiÃ§oado', boss: true,
     hp: 1800, armor: 0.25, speed: 1.0, damage: 10,
     scale: 1.9, barY: 2.9, build: buildCursedCaptain,
   },
@@ -40,14 +41,18 @@ export const ENEMY_TYPES = {
     barY: 1.5,
     build: buildSlime,
   },
-  skeleton: { name: 'Esqueleto', hp: 55, speed: 2.6, damage: 1, barY: 1.9, build: gen({ color: 0xe8e2cf, size: 0.6, tall: 2 }) },
-  ghost: { name: 'Fantasma', hp: 90, speed: 2.0, damage: 2, barY: 2.2, build: gen({ color: 0xbfeaff, emissive: 0x5fb0ff, opacity: 0.55, size: 0.8, tall: 1.5, float: 0.5 }) },
-  magmaling: { name: 'Magmaling', hp: 80, speed: 2.4, damage: 1, barY: 1.6, build: gen({ color: 0x3a2a28, emissive: 0xff4a10, size: 0.8 }) },
-  obsidian: { name: 'Obsidiana', hp: 180, speed: 1.5, damage: 3, barY: 2.2, build: gen({ color: 0x2a2630, emissive: 0xff6a20, size: 1.1, tall: 1.3 }) },
-  deepling: { name: 'Abissal', hp: 70, speed: 2.5, damage: 1, barY: 1.7, build: gen({ color: 0x2a8fb0, emissive: 0x0f5f80, size: 0.8, tall: 1.2 }) },
-  cursedCaptain: { name: 'Capitão Amaldiçoado', boss: true, hp: 700, speed: 1.1, damage: 5, barY: 3.2, build: gen({ color: 0x3b2a5a, emissive: 0x6a2aff, size: 1.7, tall: 1.5 }) },
-  lavaTitan: { name: 'Titã de Lava', boss: true, hp: 1000, speed: 1.0, damage: 6, barY: 3.6, build: gen({ color: 0x2a2020, emissive: 0xff4a10, size: 2, tall: 1.6 }) },
-  kraken: { name: 'Kraken', boss: true, hp: 1500, speed: 0.9, damage: 10, barY: 4, build: gen({ color: 0x7a3fa0, emissive: 0x40206a, size: 2.1, tall: 1.5 }) },
+  skeleton: { name: 'Esqueleto', hp: 55, speed: 2.6, damage: 1, barY: 1.9, build: ENEMY_MODELS.skeleton },
+  ghost: { name: 'Fantasma', hp: 90, speed: 2.0, damage: 2, barY: 2.2, build: ENEMY_MODELS.ghost },
+  magmaling: { name: 'Magmaling', hp: 80, speed: 2.4, damage: 1, barY: 1.6, build: ENEMY_MODELS.magmaling },
+  obsidian: { name: 'Obsidiana', hp: 180, speed: 1.5, damage: 3, barY: 2.2, build: ENEMY_MODELS.obsidian },
+  deepling: { name: 'Abissal', hp: 70, speed: 2.5, damage: 1, barY: 1.7, build: ENEMY_MODELS.deepling },
+  gravekeeper: {
+    name: 'Coveiro Sombrio', boss: true, minion: 'skeleton',
+    hp: 1200, armor: 0.2, speed: 1.0, damage: 8,
+    scale: 1.6, barY: 3.3, build: buildGravekeeper,
+  },
+  lavaTitan: { name: 'TitÃ£ de Lava', boss: true, hp: 1000, speed: 1.0, damage: 6, barY: 3.6, build: ENEMY_MODELS.lavaTitan },
+  kraken: { name: 'Kraken', boss: true, hp: 1500, speed: 0.9, damage: 10, barY: 4, build: ENEMY_MODELS.kraken },
 };
 
 function gen({ color, eye = 0xffffff, emissive = 0x000000, opacity = 1, size = 1, tall = 1, float = 0 }) {
@@ -117,6 +122,37 @@ function buildCursedCaptain(model) {
   });
   aura.visible = false; model.userData.aura = aura;
   return (t) => { body.position.y = 0.25 + Math.sin(t * 2) * 0.12; arm.rotation.z = Math.sin(t * 3) * 0.25; aura.scale.setScalar(1 + Math.sin(t * 8) * 0.04); };
+}
+
+function buildGravekeeper(model) {
+  const body = new THREE.Group(); model.add(body);
+  const green = { emissive: 0x7dffb0, emissiveIntensity: 1.6 };
+  add(body, new THREE.ConeGeometry(0.75, 1.9, 8), 0x2a2f3a, { y: 0.95 });
+  add(body, new THREE.CylinderGeometry(0.4, 0.62, 0.9, 8), 0x1c2029, { y: 1.55 });
+  add(body, G.body, 0x15181e, { y: 2.2, sx: 0.64, sy: 0.64, sz: 0.64 });
+  add(body, G.body, 0xe8e2cf, { x: 0.2, y: 2.18, sx: 0.36, sy: 0.4, sz: 0.36 });
+  [-1, 1].forEach((s) => add(body, G.eye, 0x7dffb0, { x: 0.5, y: 2.24, z: 0.13 * s, sx: 1.2, sy: 1.2, sz: 1.2, matOpts: green }));
+  add(body, new THREE.CylinderGeometry(0.62, 0.62, 0.06, 10), C.black, { y: 2.55 });
+  add(body, new THREE.CylinderGeometry(0.28, 0.36, 0.4, 10), C.black, { y: 2.75 });
+  add(body, new THREE.CylinderGeometry(0.37, 0.37, 0.06, 10), 0x7dffb0, { y: 2.6, matOpts: green });
+  // PÃ¡
+  const arm = new THREE.Group(); arm.position.set(0.2, 1.8, 0.62); body.add(arm);
+  add(arm, new THREE.CylinderGeometry(0.1, 0.1, 0.8, 6), 0x1c2029, { y: -0.4, rz: -0.4 });
+  add(arm, new THREE.CylinderGeometry(0.05, 0.05, 2.6, 6), C.woodDark, { x: 0.55, y: -0.7, rz: -0.25 });
+  add(arm, new THREE.BoxGeometry(0.1, 0.7, 0.55), 0x8d96a3, { x: 1.2, y: -1.95, rz: -0.25, matOpts: { metalness: 0.5 } });
+  // Lanterna
+  add(body, new THREE.CylinderGeometry(0.02, 0.02, 0.5, 4), C.black, { x: 0.3, y: 1.55, z: -0.7 });
+  const lamp = add(body, G.body, 0x7dffb0, { x: 0.3, y: 1.2, z: -0.7, sx: 0.2, sy: 0.26, sz: 0.2, cast: false, matOpts: green });
+  const aura = add(model, new THREE.SphereGeometry(1.5, 14, 10), 0xa0ffd0, {
+    y: 1.5, cast: false, matOpts: { transparent: true, opacity: 0.28, emissive: 0x7dffb0, emissiveIntensity: 0.8, side: THREE.DoubleSide },
+  });
+  aura.visible = false; model.userData.aura = aura;
+  return (t) => {
+    body.position.y = 0.2 + Math.sin(t * 1.8) * 0.1;
+    arm.rotation.z = Math.sin(t * 2.5) * 0.2;
+    lamp.scale.y = 0.26 + Math.sin(t * 9) * 0.03;
+    aura.scale.setScalar(1 + Math.sin(t * 8) * 0.04);
+  };
 }
 
 function buildSlime(model) {
@@ -246,7 +282,7 @@ export class Enemy {
     if (this.shield > 0) this.shield = Math.max(0, this.shield - dt);
     else if ((this.shieldTimer -= dt) <= 0) { this.shieldTimer = 14; this.shield = 3; }
     if (!this.enraged && this.hp < this.maxHp * 0.5) { this.enraged = true; this.speed *= 1.6; }
-    this.model.userData.aura.visible = this.shield > 0;
+    if (this.model.userData.aura) this.model.userData.aura.visible = this.shield > 0;
   }
 
   update(dt, time, camera) {
@@ -320,7 +356,7 @@ export class EnemyManager {
       const e = this.enemies[i];
       const result = e.update(dt, time, camera);
       if (e.summonRequest) {
-        for (let k = 0; k < e.summonRequest; k++) this.spawn('crab', Math.max(0, e.distance - 1.5 - k * 1.2), true);
+        for (let k = 0; k < e.summonRequest; k++) this.spawn(e.def.minion || 'crab', Math.max(0, e.distance - 1.5 - k * 1.2), true);
         e.summonRequest = 0;
       }
       if (result === 'reached') {
@@ -343,3 +379,4 @@ export class EnemyManager {
     e.dispose();
   }
 }
+

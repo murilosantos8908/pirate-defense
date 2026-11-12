@@ -1,11 +1,6 @@
 export const MAX_WAVES = 10;
 export const INTERMISSION_SECONDS = 5;
-export const BOSS_INTERVAL = 10;
-export const BOSS_ROSTER = ['cursedCaptain'];
-export const KILL_REWARDS = Object.freeze({ crab: 5, slime: 10, skeleton: 6, ghost: 12, magmaling: 8, obsidian: 20, deepling: 7, cursedCaptain: 100, lavaTitan: 150, kraken: 250 });
-
-export const bossFor = (n) =>
-  n % BOSS_INTERVAL === 0 ? BOSS_ROSTER[(n / BOSS_INTERVAL - 1) % BOSS_ROSTER.length] : null;
+export const KILL_REWARDS = Object.freeze({ crab: 5, slime: 10, skeleton: 6, ghost: 12, magmaling: 8, obsidian: 20, deepling: 7, cursedCaptain: 100, lavaTitan: 150, kraken: 250, gravekeeper: 120 });
 
 /** Produces a deterministic, progressively harder wave composition. */
 export function createWave(number, roster = { basic: 'crab', tough: 'slime', boss: 'cursedCaptain' }) {
