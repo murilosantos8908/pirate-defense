@@ -943,7 +943,7 @@ export class DefenderManager {
       const button = document.createElement('button');
       button.className = 'btn btn-small';
       button.type = 'button';
-      button.textContent = `${def.name} Nv${entry.level} [${i + 1}]`;
+      button.textContent = `${def.name} · Nv${entry.level} · ${def.cost} moedas [${i + 1}]`;
       button.addEventListener('click', () => this.togglePlacing(entry.id));
       this.slots.appendChild(button);
       this.btns[entry.id] = button;
